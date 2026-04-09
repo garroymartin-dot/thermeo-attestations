@@ -9,16 +9,34 @@
 <title>Thermeo — Attestations chaudières</title>
 <style>
 :root{
-  --blue-dark:#1a3a6b;--blue-mid:#1a5c96;--blue-light:#dce8f4;
-  --bg:#f4f6f9;--card:#fff;--border:#e2e8f0;--text:#1a202c;
-  --text-muted:#64748b;--green:#27ae60;--green-bg:#d4edda;
-  --red:#c0392b;--red-bg:#f8d7da;--orange:#e67e22;--orange-bg:#fff3cd;
-  --radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  /* Palette Thermeo officielle */
+  --blue:#2234F0;        /* Bleu primaire Thermeo */
+  --blue-mid:#505FF3;    /* Bleu secondaire */
+  --blue-light:#F4FAFF;  /* Fond bleu très clair */
+  --blue-border:#c8d4fd; /* Bordure bleue douce */
+  --dark:#2E323A;        /* Texte principal / header */
+  --dark-mid:#5D5653;    /* Texte secondaire */
+  --gray:#E7E8EC;        /* Fond gris clair */
+  --white:#FEFEFE;       /* Blanc Thermeo */
+  --red:#EF2A24;         /* Erreur / NOK */
+  --red-bg:#fde8e8;
+  --orange:#F88539;      /* Avertissement */
+  --orange-bg:#fff3e6;
+  --green:#1db954;       /* OK / conforme */
+  --green-bg:#e6f9ed;
+  /* Mapping sémantique */
+  --bg:#F4FAFF;
+  --card:#FEFEFE;
+  --border:#E7E8EC;
+  --text:#2E323A;
+  --text-muted:#5D5653;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 2px 6px rgba(34,52,240,.07),0 1px 2px rgba(0,0,0,.04);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
 /* ── HEADER ── */
-.header{background:var(--blue-dark);color:#fff;padding:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.header{background:var(--dark);color:#fff;padding:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(34,52,240,.25)}
 .header-inner{display:flex;align-items:center;gap:12px;padding:12px 16px;max-width:800px;margin:0 auto}
 .header-logo{width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;background:#fff;display:flex;align-items:center;justify-content:center}
 .header-logo img{width:32px;height:32px;object-fit:contain}
@@ -26,49 +44,49 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .header-text p{font-size:11px;opacity:.75;margin-top:1px}
 .type-switch{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
 .tsw{padding:6px 11px;border-radius:20px;border:1.5px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.8);font-size:12px;cursor:pointer;transition:all .2s;font-weight:500;white-space:nowrap}
-.tsw.on{background:#fff;color:var(--blue-dark);border-color:#fff}
+.tsw.on{background:#fff;color:var(--dark);border-color:#fff}
 /* ── PROGRESS ── */
-.prog-wrap{background:var(--blue-dark);padding:0 16px 10px;max-width:800px;margin:0 auto}
+.prog-wrap{background:var(--dark);padding:0 16px 10px;max-width:800px;margin:0 auto}
 .prog-bar{display:flex;gap:4px}
 .prog-step{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.2);cursor:pointer;transition:background .2s;position:relative}
 .prog-step.done{background:var(--green)}
-.prog-step.active{background:#fff}
-.prog-label{color:rgba(255,255,255,.7);font-size:11px;margin-top:6px;text-align:center}
+.prog-step.active{background:var(--blue)}
+.prog-label{color:rgba(255,255,255,.8);font-size:11px;margin-top:6px;text-align:center}
 /* ── MAIN ── */
 .main{max-width:800px;margin:0 auto;padding:14px 12px 100px}
 /* ── CARDS ── */
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:12px;border:1px solid var(--border)}
-.card-title{font-size:13px;font-weight:600;color:var(--blue-dark);border-bottom:1px solid var(--border);padding-bottom:9px;margin-bottom:13px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.card-title{font-size:13px;font-weight:600;color:var(--blue);border-bottom:1px solid var(--border);padding-bottom:9px;margin-bottom:13px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500}
-.badge-blue{background:var(--blue-light);color:var(--blue-dark)}
+.badge-blue{background:var(--blue-light);color:var(--blue)}
 .badge-green{background:var(--green-bg);color:#155724}
-.badge-orange{background:var(--orange-bg);color:#856404}
+.badge-orange{background:var(--orange-bg);color:var(--orange)}
 .badge-pellet{background:#fff9f0;color:#7a4f00;border:1px solid #f0c070}
 /* ── ALERT ── */
 .alert{padding:10px 13px;border-radius:var(--radius-sm);font-size:12px;line-height:1.5;margin-bottom:12px;border-left:3px solid}
-.alert-info{background:#eff6ff;border-color:var(--blue-mid);color:#1e40af}
-.alert-orange{background:var(--orange-bg);border-color:var(--orange);color:#7c4a00}
+.alert-info{background:var(--blue-light);border-color:var(--blue);color:var(--blue)}
+.alert-orange{background:var(--orange-bg);border-color:var(--orange);color:var(--orange)}
 /* ── FORM ── */
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
 .fld{display:flex;flex-direction:column;gap:4px}
 .fld label{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.02em;text-transform:uppercase}
-.fld input,.fld select,.fld textarea{font-size:14px;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:#fff;color:var(--text);width:100%;transition:border-color .15s;-webkit-appearance:none;appearance:none}
+.fld input,.fld select,.fld textarea{font-size:14px;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--white);color:var(--text);width:100%;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
 .fld select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
-.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--blue-mid);box-shadow:0 0 0 3px rgba(26,92,150,.1)}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(34,52,240,.12)}
 .fld textarea{resize:vertical;min-height:60px}
-.fld.prefilled input,.fld.prefilled select{background:#f8fafc;color:var(--text-muted)}
+.fld.prefilled input,.fld.prefilled select{background:var(--gray);color:var(--dark-mid);border-color:transparent}
 /* ── CHECK ROWS ── */
 .chk-group{display:flex;flex-direction:column;gap:6px}
-.chk-row{display:flex;align-items:center;padding:9px 12px;background:#f8fafc;border:1px solid var(--border);border-radius:var(--radius-sm);gap:10px;transition:background .15s}
-.chk-row:hover{background:#f0f4f8}
+.chk-row{display:flex;align-items:center;padding:9px 12px;background:var(--gray);border:1.5px solid var(--border);border-radius:var(--radius-sm);gap:10px;transition:background .15s,border-color .15s}
+.chk-row:hover{background:var(--blue-light)}
 .chk-row label{font-size:13px;color:var(--text);flex:1;line-height:1.3}
-.chk-row select{font-size:13px;padding:5px 28px 5px 9px;border:1.5px solid var(--border);border-radius:6px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 8px center;-webkit-appearance:none;appearance:none;min-width:130px;flex-shrink:0}
+.chk-row select{font-size:13px;padding:5px 28px 5px 9px;border:1.5px solid var(--border);border-radius:6px;background:var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 8px center;-webkit-appearance:none;appearance:none;min-width:130px;flex-shrink:0}
 /* ── COMBUSTION TABLE ── */
 .ctbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius-sm);border:1px solid var(--border)}
 .ctbl{width:100%;border-collapse:collapse;font-size:12px;min-width:420px}
-.ctbl th{background:var(--blue-light);color:var(--blue-dark);padding:8px 6px;text-align:center;font-size:10px;font-weight:600;border-right:1px solid #c8d9ed;line-height:1.3}
+.ctbl th{background:var(--blue-light);color:var(--blue);padding:8px 6px;text-align:center;font-size:10px;font-weight:600;border-right:1px solid #c8d9ed;line-height:1.3}
 .ctbl th:last-child{border-right:none}
 .ctbl td{padding:7px 6px;border-bottom:1px solid var(--border);border-right:1px solid #f0f4f8;text-align:center;vertical-align:middle}
 .ctbl td:last-child{border-right:none}
@@ -76,35 +94,35 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .ctbl .rlbl{text-align:left;font-weight:600;font-size:11px;color:var(--text-muted);width:110px;padding-left:10px;background:#fafbfc}
 .ctbl input[type=number],.ctbl input[type=text]{width:70px;padding:5px 6px;border:1.5px solid var(--border);border-radius:6px;text-align:center;font-size:13px;-moz-appearance:textfield}
 .ctbl input::-webkit-outer-spin-button,.ctbl input::-webkit-inner-spin-button{-webkit-appearance:none}
-.ctbl input:focus{outline:none;border-color:var(--blue-mid);box-shadow:0 0 0 2px rgba(26,92,150,.12)}
+.ctbl input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(26,92,150,.12)}
 /* ── STATUS ── */
-.s-ok{color:var(--green);font-weight:700;font-size:14px}
-.s-nok{color:var(--red);font-weight:700;font-size:14px}
+.s-ok{color:var(--green);font-weight:700;font-size:13px;background:var(--green-bg);padding:3px 8px;border-radius:6px}
+.s-nok{color:var(--red);font-weight:700;font-size:13px;background:var(--red-bg);padding:3px 8px;border-radius:6px}
 .s-na{color:#94a3b8;font-size:12px}
 /* ── RESULT BOX ── */
 .rbox{padding:11px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;margin:8px 0;display:flex;align-items:center;gap:8px}
-.rbox-ok{background:var(--green-bg);color:#155724;border:1px solid #c3e6cb}
-.rbox-nok{background:var(--red-bg);color:#721c24;border:1px solid #f5c6cb}
+.rbox-ok{background:var(--green-bg);color:#0d6e34;border:1px solid #9de8b8}
+.rbox-nok{background:var(--red-bg);color:var(--red);border:1px solid #f9aaaa}
 /* ── BILAN ── */
 .bilan-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
 .bilan-bloc{text-align:center;padding:13px 8px;background:#f8fafc;border-radius:var(--radius-sm);border:1px solid var(--border)}
 .bilan-bloc .bl{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;text-transform:uppercase;margin-bottom:5px}
 .bilan-bloc .bv{font-size:14px;font-weight:700}
-.bilan-bloc.conf-ok{background:var(--green-bg);border-color:#c3e6cb}
-.bilan-bloc.conf-nok{background:var(--red-bg);border-color:#f5c6cb}
+.bilan-bloc.conf-ok{background:var(--green-bg);border-color:#9de8b8}
+.bilan-bloc.conf-nok{background:var(--red-bg);border-color:#f9aaaa}
 /* ── SECTION LABEL ── */
-.slbl{font-size:11px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.05em;margin:13px 0 8px;display:flex;align-items:center;gap:6px}
-.slbl::before{content:'';display:block;width:3px;height:14px;background:var(--blue-mid);border-radius:2px;flex-shrink:0}
+.slbl{font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;margin:13px 0 8px;display:flex;align-items:center;gap:6px}
+.slbl::before{content:'';display:block;width:3px;height:14px;background:var(--blue);border-radius:2px;flex-shrink:0}
 /* ── BOTTOM NAV ── */
-.bot-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:100;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
+.bot-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:100;box-shadow:0 -2px 10px rgba(34,52,240,.1)}
 .bot-nav .step-lbl{font-size:12px;color:var(--text-muted);text-align:center;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .btn{padding:10px 20px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .2s;min-width:90px}
 .btn-ghost{background:#f1f5f9;color:var(--text-muted)}
 .btn-ghost:hover{background:#e2e8f0}
-.btn-primary{background:var(--blue-dark);color:#fff}
-.btn-primary:hover{background:var(--blue-mid)}
-.btn-success{background:var(--green);color:#fff}
-.btn-success:hover{background:#219a52}
+.btn-primary{background:var(--blue);color:#fff;letter-spacing:.01em}
+.btn-primary:hover{background:var(--blue-mid);background:#3d4df2}
+.btn-success{background:var(--blue);color:#fff;letter-spacing:.01em}
+.btn-success:hover{background:var(--blue-mid)}
 /* ── LOADING OVERLAY ── */
 .overlay{position:fixed;inset:0;background:rgba(26,58,107,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;gap:16px;display:none}
 .overlay.show{display:flex}
@@ -115,10 +133,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px;display:none}
 .modal-bg.show{display:flex}
 .modal{background:#fff;border-radius:var(--radius);padding:24px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.modal h2{font-size:17px;font-weight:700;color:var(--blue-dark);margin-bottom:8px}
+.modal h2{font-size:17px;font-weight:700;color:var(--blue);margin-bottom:8px}
 .modal p{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:16px}
 .modal input{width:100%;font-size:14px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:12px}
-.modal input:focus{outline:none;border-color:var(--blue-mid)}
+.modal input:focus{outline:none;border-color:var(--blue)}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end}
 /* ── RESPONSIVE ── */
 @media(max-width:580px){
@@ -135,13 +153,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 </style>
 </head>
 <body>
-
+ 
 <!-- LOADING OVERLAY -->
 <div class="overlay" id="overlay">
   <div class="spinner"></div>
   <p id="overlay-msg">Génération du PDF en cours...</p>
 </div>
-
+ 
 <!-- API KEY MODAL -->
 <div class="modal-bg" id="modal-apikey">
   <div class="modal">
@@ -158,7 +176,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     </div>
   </div>
 </div>
-
+ 
 <!-- HEADER -->
 <header class="header">
   <div class="header-inner">
@@ -179,21 +197,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     <div class="prog-label" id="prog-lbl"></div>
   </div>
 </header>
-
+ 
 <!-- MAIN CONTENT -->
 <main class="main" id="main"></main>
-
+ 
 <!-- BOTTOM NAV -->
 <nav class="bot-nav">
   <button class="btn btn-ghost" id="btn-prev" onclick="prev()">← Retour</button>
   <span class="step-lbl" id="step-lbl"></span>
   <button class="btn btn-primary" id="btn-next" onclick="next()">Suivant →</button>
 </nav>
-
+ 
 <script>
 // ══ CONFIG ══
 const TECH = {nom:"Martin Garroy",agrement:"TGI 467",entreprise:"Thermeo",tel:"0478/655033",email:"Contact@thermeo.be",nentreprise:"BE0755731354",oca:"Non"};
-
+ 
 const CATALOG = {
   "Gaz - Unit - Prémix - Condensation":{raccordements:["C13","C13x","C33","C43","C53","C63","C93"],bruleurs:["Modulant"],marques:["Vaillant","Bulex","De Dietrich","Bosch","Viessmann","Baxi","Remeha","Ariston","Chaffoteaux","Saunier Duval","Atlantic","Daikin Altherma"],condensation:"Oui",fluides:["Eau"],perf:{t_nette:"60",co:"110",rendement:"90"},cols:["t_nette","co","rendement"],note:"Chaudière gaz à condensation (ventouse étanche). Vérifier le siphon de condensats."},
   "Gaz - Unit - Non-prémix - Condensation":{raccordements:["C13","C33","C43","C53","C93"],bruleurs:["Modulant","1 Allure"],marques:["Junkers","Bulex","Atlantic","Elm Leblanc"],condensation:"Oui",fluides:["Eau"],perf:{t_nette:"80",co:"150",rendement:"88"},cols:["t_nette","co","rendement"],note:"Chaudière gaz condensation — brûleur non-prémix."},
@@ -203,7 +221,7 @@ const CATALOG = {
   "Pellet - Poêle (EN 14785)":{raccordements:["Conduit individuel vertical","Conduit individuel horizontal","Sortie directe façade","Conduit collectif"],bruleurs:["Modulant","1 Allure"],marques:["MCZ","Piazzetta","Edilkamin","La Nordica","Rika","Austroflamm","Palazzetti","Haas+Sohn","Biotech","Windhager","Stuv","CMG"],condensation:"Non",fluides:["Air"],perf:{co_ppm:"500",rendement:"85"},cols:["co_ppm","rendement"],is_pellet:true,note:"🌾 Poêle à pellet — CO en ppm à 13% O₂ (EN 14785). Rendement ≥ 85%."},
   "Pellet - Chaudière (EN 303-5)":{raccordements:["Conduit individuel vertical","Conduit collectif","Autre"],bruleurs:["Modulant","1 Allure"],marques:["Windhager","Biotech","Fröling","KWB","Herz","Viessmann","Buderus","Okofen","Gilles","HDG"],condensation:"Non",fluides:["Eau"],perf:{co_ppm:"500",rendement:"87"},cols:["co_ppm","rendement"],is_pellet:true,note:"🌾 Chaudière à pellet — CO en ppm à 13% O₂ (EN 303-5). Rendement ≥ 87%."},
 };
-
+ 
 const COL_LABELS = {t_nette:"T° nette\nMAX (°C)",co2:"CO₂ MIN\n(%)",o2:"O₂ MAX\n(%)",co:"CO MAX\n(mg/kWh)",rendement:"Rendement\nMIN (%)",co_ppm:"CO MAX\nà 13%O₂ (ppm)",indice_fumee:"Indice fumée\nMAX (Bach.)"};
 const COL_MAX = {t_nette:true,co:true,co2:false,o2:true,rendement:false,co_ppm:true,indice_fumee:true};
 const NATURES = ["Contrôle périodique","Après 1ère non-conformité","Après 2ème non-conformité","Remise en fonctionnement","Après intervention combustion"];
@@ -214,7 +232,7 @@ const OUINON_NA = ["Oui","Non","Pas applicable"];
 const PRESENT3 = ["Présent","Pas présent","Pas applicable"];
 const PROD3 = ["Chauffage","ECS","Chauffage + ECS"];
 const PERMIS2 = ["Avant le 29/05/2009","Après le 29/05/2009"];
-
+ 
 // ══ STATE ══
 let TYPE = "reception";
 let STEP = 0;
@@ -231,22 +249,22 @@ let D = {
   reg_automatique:"Oui",reg_thermostat:"Oui",reg_horloge:"Oui",reg_programmation_nuit:"Oui",
   pompe_mode:"Automatique",pompe_dysfonctionnement:"Non",localisation_gen:"IDEM",
 };
-
+ 
 function genN(){const d=new Date();return`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-1`;}
 function today(){const d=new Date();return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;}
 function cat(){return CATALOG[D.combustible]||CATALOG["Gaz - Unit - Prémix - Condensation"];}
 function isPellet(){return !!cat().is_pellet;}
 function isAtmo(){return D.combustible.includes("Atmosphérique");}
-
+ 
 const STEPS = ["Identification","Générateur","Installation","Régulation","Combustion","Bilan"];
-
+ 
 function setType(t){TYPE=t;document.getElementById('tsw-r').className='tsw'+(t==='reception'?' on':'');document.getElementById('tsw-p').className='tsw'+(t==='periodique'?' on':'');STEP=0;render();}
 function prev(){if(STEP>0){save();STEP--;render();window.scrollTo(0,0);}}
 function next(){save();if(STEP<STEPS.length-1){STEP++;render();window.scrollTo(0,0);}else{genPDF();}}
 function jump(i){save();STEP=i;render();window.scrollTo(0,0);}
-
+ 
 function save(){document.querySelectorAll('[data-f]').forEach(el=>{D[el.dataset.f]=el.value;});calcConf();}
-
+ 
 function calcConf(){
   const ct=cat(),pm=ct.perf||{},cols=ct.cols||[];
   cols.forEach(k=>{
@@ -259,15 +277,31 @@ function calcConf(){
   D.v2_global=bad.some(x=>x==='Non conforme'||x==='Non')?'Non':'Oui';
   D.declaration_conformite=(D.v2_global==='Oui'&&D.resultat_combustion==='OK')?'Oui':'Non';
 }
-
+ 
 // ── HTML HELPERS ──
-function fld(id,lbl,val,pre,type,opts){
+function fld(id,lbl,val,pre,type,opts,_u,onchg){
   const cls=pre?'fld prefilled':'fld';
   if(opts){
     const os=opts.map(o=>`<option value="${o}" ${(val||'')==o?'selected':''}>${o}</option>`).join('');
-    return`<div class="${cls}"><label>${lbl}</label><select data-f="${id}">${os}</select></div>`;
+    return`<div class="${cls}"><label>${lbl}</label><select data-f="${id}" ${onchg||''}>${os}</select></div>`;
   }
   return`<div class="${cls}"><label>${lbl}</label><input type="${type||'text'}" data-f="${id}" value="${String(val||'')}" ${pre?'readonly':''}></div>`;
+}
+function onCombustibleChange(){
+  const sel=document.querySelector('[data-f="combustible"]');
+  if(sel){
+    D.combustible=sel.value;
+    const ct=CATALOG[D.combustible]||cat();
+    D.raccordement=ct.raccordements[0]||'';
+    D.type_bruleur=ct.bruleurs[0]||'';
+    D.fluide=ct.fluides[0]||'Eau';
+    D.condensation=ct.condensation||'Non';
+    // Reset pellet-specific fields
+    if(!ct.is_pellet){D.pellet_norme='';D.pellet_alimentation='';D.v2_qualite_pellet='';}
+  }
+  const scrollY=window.scrollY;
+  document.getElementById('main').innerHTML=renderStep();
+  window.scrollTo(0,scrollY);
 }
 function fta(id,lbl,val){return`<div class="fld"><label>${lbl}</label><textarea data-f="${id}">${val||''}</textarea></div>`;}
 function cr(id,lbl,val,opts){
@@ -280,7 +314,7 @@ function cmpCell(v,id){
   if(v==='OK')return`<span class="s-ok" id="${id||''}">✓ OK</span>`;
   return`<span class="s-nok" id="${id||''}">✗ NOK</span>`;
 }
-
+ 
 // ── STEPS ──
 function renderStep(){
   const s=STEPS[STEP];
@@ -292,7 +326,7 @@ function renderStep(){
   if(s==="Bilan")return sBilan();
   return '';
 }
-
+ 
 function sIdent(){const d=D;return`
 <div class="card">
   <div class="card-title">Technicien agréé <span class="badge badge-blue">Pré-rempli</span></div>
@@ -322,7 +356,7 @@ function sIdent(){const d=D;return`
   </div>
   ${fld('localisation_gen',"Localisation du générateur si différente de l'adresse",d.localisation_gen)}
 </div>`;}
-
+ 
 function sGen(){
   const d=D;const ct=cat();
   const marqOpts=["Autre",...ct.marques];
@@ -331,7 +365,7 @@ function sGen(){
   <div class="card-title">Type d'appareil ${isPellet()?'<span class="badge badge-pellet">🌾 Pellet</span>':''}</div>
   <div class="alert alert-info">${ct.note}</div>
   <div class="grid-2">
-    ${fld('combustible','Type / Combustible',d.combustible,false,null,Object.keys(CATALOG))}
+    ${fld('combustible','Type / Combustible',d.combustible,false,null,Object.keys(CATALOG),'','onchange="onCombustibleChange()"')}
     ${fld('raccordement','Raccordement / évacuation',d.raccordement,false,null,ct.raccordements)}
     ${fld('type_bruleur','Type brûleur',d.type_bruleur,false,null,ct.bruleurs)}
     ${fld('condensation','Condensation',d.condensation,false,null,YESNO)}
@@ -366,7 +400,7 @@ function sGen(){
     ${fld('conduit_type','Type de conduit',d.conduit_type,false,null,['Individuel','Collectif'])}
   </div>
 </div>`;}
-
+ 
 function sInstall(){const d=D;return`
 <div class="alert alert-info">Cochez chaque point selon vos constatations sur site.</div>
 <div class="card">
@@ -405,7 +439,7 @@ ${isPellet()?`<div class="card">
   </div>
 </div>`:''}
 <div id="v1b-res"></div>`;}
-
+ 
 function sReg(){const d=D;const pnom=parseFloat(d.gen_puissance||0);return`
 <div class="alert alert-info">Volet 2 officiel — Inspection du système de régulation et des pompes de circulation.</div>
 <div class="card">
@@ -442,7 +476,7 @@ ${pnom>20?`<div class="card">
   </div>
 </div>`:''}
 `;}
-
+ 
 function sCombust(){
   const d=D;const ct=cat();const cols=ct.cols||[];const pm=ct.perf||{};
   const hdrs=cols.map(k=>`<th>${(COL_LABELS[k]||k).replace(/\n/g,'<br>')}</th>`).join('');
@@ -459,7 +493,7 @@ function sCombust(){
     <tbody>
       <tr><td class="rlbl">Perf. min</td>${pmRow}</tr>
       <tr><td class="rlbl">Valeurs mesurées</td>${measRow}</tr>
-      <tr><td class="rlbl" style="background:#dce8f4;font-weight:700;color:var(--blue-dark)">Comparaison</td>${cmpRow}</tr>
+      <tr><td class="rlbl" style="background:#dce8f4;font-weight:700;color:var(--blue)">Comparaison</td>${cmpRow}</tr>
     </tbody>
   </table>
   </div>
@@ -468,7 +502,7 @@ function sCombust(){
   </div>
 </div>
 <div id="comb-res"></div>`;}
-
+ 
 function sBilan(){
   const d=D;calcConf();
   const conf=d.declaration_conformite;const v2=d.v2_global;const comb=d.resultat_combustion;
@@ -500,7 +534,7 @@ function sBilan(){
 <div style="padding:16px;text-align:center">
   <button class="btn btn-success" onclick="genPDF()" style="width:100%;max-width:320px;padding:14px;font-size:15px;border-radius:12px">⬇ Générer l'attestation PDF</button>
 </div>`;}
-
+ 
 // ── LIVE UPDATES ──
 function liveV1b(){
   save();
@@ -524,7 +558,7 @@ function liveUpd(){
     el.innerHTML=`<div class="rbox ${D.resultat_combustion==='OK'?'rbox-ok':'rbox-nok'}">${D.resultat_combustion==='OK'?'✓ Résultat global combustion : CONFORME':'✗ Résultat global combustion : NON CONFORME'}</div>`;
   else if(el)el.innerHTML='';
 }
-
+ 
 // ── PDF GENERATION ──
 async function genPDF(){
   save();calcConf();
@@ -534,7 +568,7 @@ async function genPDF(){
   const pmSimple={};Object.entries(ct.perf||{}).forEach(([k,v])=>{pmSimple[k]=v;});
   const valsComb={};(ct.cols||[]).forEach(k=>{valsComb[k]=D[`val_${k}`]||'';});
   const payload=Object.assign({},D,{type_attestation:TYPE,perf_min:pmSimple,valeurs_combustion:valsComb,is_pellet:isPellet()});
-
+ 
   showOverlay('Génération du PDF en cours...');
   try{
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
@@ -559,26 +593,26 @@ async function genPDF(){
     }
   }
 }
-
+ 
 function showCopyFallback(payload){
   const str='GENERATE_PDF:'+JSON.stringify(payload);
   const div=document.createElement('div');
   div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px';
   div.innerHTML=`<div style="background:#fff;border-radius:12px;padding:24px;max-width:500px;width:100%">
-    <h3 style="font-size:16px;font-weight:700;color:#1a3a6b;margin-bottom:8px">📋 Copier les données</h3>
+    <h3 style="font-size:16px;font-weight:700;color:var(--blue);margin-bottom:8px">📋 Copier les données</h3>
     <p style="font-size:13px;color:#64748b;margin-bottom:12px;line-height:1.5">Copiez ce texte et collez-le dans votre conversation Claude pour générer le PDF :</p>
     <textarea readonly style="width:100%;height:80px;font-size:11px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-family:monospace">${str.substring(0,500)}...</textarea>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button onclick="navigator.clipboard.writeText(\`${str.replace(/`/g,"'")}\`);this.textContent='✅ Copié !'" style="flex:1;padding:10px;background:#1a3a6b;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">📋 Copier</button>
+      <button onclick="navigator.clipboard.writeText(\`${str.replace(/`/g,"'")}\`);this.textContent='✅ Copié !'" style="flex:1;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">📋 Copier</button>
       <button onclick="this.closest('div[style]').remove()" style="padding:10px 16px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer;font-size:14px">Fermer</button>
     </div>
   </div>`;
   document.body.appendChild(div);
 }
-
+ 
 function showOverlay(msg){document.getElementById('overlay-msg').textContent=msg;document.getElementById('overlay').className='overlay show';}
 function hideOverlay(){document.getElementById('overlay').className='overlay';}
-
+ 
 function showApiModal(){document.getElementById('modal-apikey').className='modal-bg show';}
 function closeApiModal(){document.getElementById('modal-apikey').className='modal-bg';}
 function saveApiKey(){
@@ -589,7 +623,7 @@ function saveApiKey(){
     genPDF();
   }else{alert('Clé invalide. Elle doit commencer par sk-ant-');}
 }
-
+ 
 // ── RENDER ──
 function render(){
   document.getElementById('pgbar').innerHTML=STEPS.map((s,i)=>`<div class="prog-step ${i<STEP?'done':i===STEP?'active':''}" onclick="jump(${i})" title="${s}"></div>`).join('');
