@@ -1,13 +1,10 @@
 {
   "name": "thermeo-attestations",
-  "version": "1.0.0",
-  "description": "Thermeo — Génération d'attestations chaudières AGW 29/01/2009",
+  "version": "2.0.0",
+  "description": "Thermeo — Attestations chaudières AGW 29/01/2009",
   "private": true,
-  "scripts": {
-    "dev": "netlify dev"
-  },
   "dependencies": {
-    "node-fetch": "^3.3.2"
+    "pdfkit": "^0.15.0"
   },
   "engines": {
     "node": ">=18.0.0"
