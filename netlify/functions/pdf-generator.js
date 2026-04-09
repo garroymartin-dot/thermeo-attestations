@@ -178,10 +178,10 @@ function generateAttestation(data) {
     // HEADER
     // ───────────────────────────────────────
     const HDR = 60;
-    fillRect(0, 0, W, HDR, '#1E2230');
+    fillRect(0, 0, W, HDR, '#FFFFFF');
     fillRect(0, 0, 5, HDR, C.blue);
     // Titre
-    t('ATTESTATION DE ' + labelAtt, ML + 8, 13, { bold: true, size: 15, color: C.white });
+    t('ATTESTATION DE ' + labelAtt, ML + 8, 13, { bold: true, size: 15, color: C.blue });
     t('G\u00e9n\u00e9rateur de chaleur  \u2014  AGW du 29/01/2009  \u2014  R\u00e9gion Wallonne', ML + 8, 34, { size: 8.5, color: 'rgba(255,255,255,0.6)' });
     // Badge N°
     const bx = W - MR - 138, by = 9;
