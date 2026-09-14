@@ -1,25 +1,26 @@
 const PDFDocument = require('pdfkit');
 
+// Palette Thermeo officielle — doit rester synchronisée avec :root dans public/index.html
 const C = {
   blue:      '#2234F0',
   blueMid:   '#505FF3',
-  bluePale:  '#EEF1FF',
-  blueBorder:'#C5CCFA',
+  bluePale:  '#F4FAFF',
+  blueBorder:'#C8D4FD',
   gray:      '#E7E8EC',
   grayLight: '#F7F8FA',
-  white:     '#FFFFFF',
+  white:     '#FEFEFE',
   text:      '#2E323A',
   textMid:   '#5D5653',
-  green:     '#1A9E4A',
-  greenBg:   '#E8F7EE',
+  green:     '#1DB954',
+  greenBg:   '#E6F9ED',
   greenBord: '#A3D9B8',
   red:       '#EF2A24',
-  redBg:     '#FDEAEA',
+  redBg:     '#FDE8E8',
   redBord:   '#F5AAAA',
   orange:    '#F88539',
   orangeBg:  '#FFF3E6',
   orangeBord:'#F8C89A',
-  line:      '#DDE1E9',
+  line:      '#E7E8EC',
 };
 
 const ML   = 30;   // marge gauche
@@ -75,16 +76,45 @@ function generateAttestation(data) {
     }
     function t(text, x, yy, o) {
       o = o || {};
+      const opts = { align: o.align || 'left' };
+      if (o.width != null) {
+        opts.width = o.width;
+        if (o.wrap) {
+          opts.lineBreak = true;
+        } else {
+          // PDFKit wraps to a new line as soon as `width` is set, whatever
+          // `lineBreak` is told \u2014 there is no "single line, allow overflow"
+          // mode. Force one line with an ellipsis instead, so a value that's
+          // too long is trimmed instead of wrapping mid-word into the row below.
+          opts.height = (o.size || 9) + 3;
+          opts.ellipsis = true;
+        }
+      }
       doc.save()
         .fillColor(o.color || C.text)
         .font(o.bold ? 'Helvetica-Bold' : (o.font || 'Helvetica'))
         .fontSize(o.size || 9)
-        .text(String(text != null ? text : '\u2014'), x, yy, {
-          width:     o.width,
-          align:     o.align || 'left',
-          lineBreak: o.wrap || false,
-        })
+        .text(String(text != null ? text : '\u2014'), x, yy, opts)
         .restore();
+    }
+    function labelWidth(text, size, bold) {
+      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(size || 8);
+      return doc.widthOfString(String(text));
+    }
+    // Coche / croix dessinées en vectoriel : les polices standard de PDFKit
+    // (Helvetica, encodage WinAnsi) n'ont pas les glyphes \u2713/\u2717 et les
+    // affichaient comme des caractères aléatoires (\', &...) dans le PDF.
+    function checkIcon(x, yy, ok, size, color) {
+      const s = size || 10;
+      doc.save().lineWidth(Math.max(1.2, s * 0.13)).strokeColor(color).lineCap('round').lineJoin('round');
+      if (ok) {
+        doc.moveTo(x, yy + s * 0.55).lineTo(x + s * 0.38, yy + s * 0.9).lineTo(x + s, yy + s * 0.15).stroke();
+      } else {
+        doc.moveTo(x + s * 0.1, yy + s * 0.1).lineTo(x + s * 0.9, yy + s * 0.9)
+           .moveTo(x + s * 0.9, yy + s * 0.1).lineTo(x + s * 0.1, yy + s * 0.9).stroke();
+      }
+      doc.restore();
+      return x + s + 6;
     }
 
     // ───────────────────────────────────────
@@ -107,28 +137,36 @@ function generateAttestation(data) {
     }
 
     // Ligne label : valeur (pleine largeur, jamais coupée)
+    // Largeur de colonne fixe pour aligner toutes les valeurs d'une même
+    // liste (assez large pour le plus long des libellés utilisés ici).
+    const KV_LABEL_W = 180;
     function kvRow(yy, label, value, bg) {
       const h = 20;
       if (bg) fillRect(ML, yy, PW, h, bg);
-      t(label, ML + 8, yy + 6, { size: 8, color: C.textMid, width: 165 });
-      t(value || '\u2014', ML + 176, yy + 6, { bold: true, size: 8.5, color: C.text, width: PW - 182 });
+      t(label, ML + 8, yy + 6, { size: 8, color: C.textMid, width: KV_LABEL_W });
+      t(value || '\u2014', ML + 8 + KV_LABEL_W + 6, yy + 6, { bold: true, size: 8.5, color: C.text, width: PW - KV_LABEL_W - 30 });
       hl(yy + h, ML, W - MR, C.line, 0.3);
       return yy + h;
     }
 
-    // Ligne label : valeur sur 2 colonnes
+    // Ligne label : valeur sur 2 colonnes. La largeur de la colonne label est
+    // mesurée sur le texte réel (le 3e élément éventuel du tuple [label,
+    // valeur, largeur] est ignoré — un budget en dur finissait toujours par
+    // être trop étroit pour l'un ou l'autre des libellés).
     function kvRow2(yy, left, right, bg) {
       const h = 20;
       const hw = PW / 2;
       if (bg) fillRect(ML, yy, PW, h, bg);
       // col gauche
-      t(left[0], ML + 8, yy + 6, { size: 8, color: C.textMid, width: left[2] || 60 });
-      t(left[1] || '\u2014', ML + (left[2] || 60) + 10, yy + 6, { bold: true, size: 8.5, color: C.text, width: hw - (left[2] || 60) - 18 });
+      const lw = labelWidth(left[0], 8) + 4;
+      t(left[0], ML + 8, yy + 6, { size: 8, color: C.textMid, width: lw + 2 });
+      t(left[1] || '\u2014', ML + 8 + lw + 8, yy + 6, { bold: true, size: 8.5, color: C.text, width: hw - lw - 20 });
       // col droite
       if (right) {
         const rx = ML + hw + 4;
-        t(right[0], rx, yy + 6, { size: 8, color: C.textMid, width: right[2] || 60 });
-        t(right[1] || '\u2014', rx + (right[2] || 60) + 6, yy + 6, { bold: true, size: 8.5, color: C.text, width: hw - (right[2] || 60) - 14 });
+        const rlw = labelWidth(right[0], 8) + 4;
+        t(right[0], rx, yy + 6, { size: 8, color: C.textMid, width: rlw + 2 });
+        t(right[1] || '\u2014', rx + rlw + 8, yy + 6, { bold: true, size: 8.5, color: C.text, width: hw - rlw - 20 });
       }
       hl(yy + h, ML, W - MR, C.line, 0.3);
       return yy + h;
@@ -208,22 +246,28 @@ function generateAttestation(data) {
     let yl = subHeader(y, 'TECHNICIEN AGRÉÉ', ML, cw);
     let yr = subHeader(y, 'DEMANDEUR / CLIENT', rx2, cw);
 
-    const techR = [['Nom :', data.tech_nom, 24], ['Agr\u00e9ment :', data.tech_agrement, 32], ['Entreprise :', data.tech_entreprise, 36], ['T\u00e9l :', data.tech_tel, 18], ['E-mail :', data.tech_email, 24], ['N\u00b0 TVA :', data.tech_nentreprise, 26]];
-    const cliR  = [['Nom :', data.client_nom, 18], ['Qualit\u00e9 :', data.client_qualite, 26], ['Adresse :', data.client_adresse, 28], ['Localit\u00e9 :', data.client_localite, 28], ['T\u00e9l :', data.client_tel, 18], ['E-mail :', data.client_email, 24]];
+    const techR = [['Nom :', data.tech_nom], ['Agr\u00e9ment :', data.tech_agrement], ['Entreprise :', data.tech_entreprise], ['T\u00e9l :', data.tech_tel], ['E-mail :', data.tech_email], ['N\u00b0 TVA :', data.tech_nentreprise]];
+    const cliR  = [['Nom :', data.client_nom], ['Qualit\u00e9 :', data.client_qualite], ['Adresse :', data.client_adresse], ['Localit\u00e9 :', data.client_localite], ['T\u00e9l :', data.client_tel], ['E-mail :', data.client_email]];
     const rowH  = 18;
+    // Largeur de label mesurée sur le texte réel (les libellés ci-dessus ne
+    // sont pas tous de la même longueur : un budget fixe finissait par être
+    // trop étroit et provoquait un retour à la ligne qui chevauchait la
+    // ligne suivante).
+    const techLW = Math.max.apply(null, techR.map(function(r) { return labelWidth(r[0], 8); }));
+    const cliLW  = Math.max.apply(null, cliR.map(function(r) { return labelWidth(r[0], 8); }));
 
     techR.forEach(function(r, i) {
       if (i % 2 === 0) fillRect(ML, yl, cw, rowH, C.grayLight);
-      t(r[0], ML + 8, yl + 5, { size: 8, color: C.textMid, width: r[2] + 2 });
-      t(r[1] || '\u2014', ML + r[2] + 12, yl + 5, { bold: true, size: 8.5, color: C.text, width: cw - r[2] - 18 });
+      t(r[0], ML + 8, yl + 5, { size: 8, color: C.textMid, width: techLW + 4 });
+      t(r[1] || '\u2014', ML + techLW + 16, yl + 5, { bold: true, size: 8.5, color: C.text, width: cw - techLW - 24 });
       hl(yl + rowH, ML, ML + cw, C.line, 0.3);
       yl += rowH;
     });
 
     cliR.forEach(function(r, i) {
       if (i % 2 === 0) fillRect(rx2, yr, cw, rowH, C.grayLight);
-      t(r[0], rx2 + 8, yr + 5, { size: 8, color: C.textMid, width: r[2] + 2 });
-      t(r[1] || '\u2014', rx2 + r[2] + 12, yr + 5, { bold: true, size: 8.5, color: C.text, width: cw - r[2] - 18 });
+      t(r[0], rx2 + 8, yr + 5, { size: 8, color: C.textMid, width: cliLW + 4 });
+      t(r[1] || '\u2014', rx2 + cliLW + 16, yr + 5, { bold: true, size: 8.5, color: C.text, width: cw - cliLW - 24 });
       hl(yr + rowH, rx2, rx2 + cw, C.line, 0.3);
       yr += rowH;
     });
@@ -278,7 +322,8 @@ function generateAttestation(data) {
     y += 6;
     var v1bOk = data.v2_global === 'Oui';
     fillRRect(ML, y, PW, 28, v1bOk ? C.greenBg : C.redBg, v1bOk ? C.greenBord : C.redBord, 4);
-    t((v1bOk ? '\u2713' : '\u2717') + '  Conformit\u00e9 globale installation (I, II, III & IV) : ' + (v1bOk ? 'OUI' : 'NON'), ML + 14, y + 9, { bold: true, size: 10, color: v1bOk ? C.green : C.red });
+    checkIcon(ML + 14, y + 8, v1bOk, 11, v1bOk ? C.green : C.red);
+    t('Conformit\u00e9 globale installation (I, II, III & IV) : ' + (v1bOk ? 'OUI' : 'NON'), ML + 32, y + 9, { bold: true, size: 10, color: v1bOk ? C.green : C.red });
     y += 36;
 
     // ───────────────────────────────────────
@@ -323,8 +368,8 @@ function generateAttestation(data) {
     var pm      = data.perf_min || {};
     var vals    = data.valeurs_combustion || {};
     var colDefs = isPellet
-      ? [['co_ppm', 'CO MAX\n\u00e0 13% O\u2082\n(ppm)'], ['rendement', 'Rendement\nMIN (%)']]
-      : [['t_nette', 'T\u00b0 nette\nfum\u00e9es\nMAX (\u00b0C)'], ['co2', 'CO\u2082\nMIN (%)'], ['o2', 'O\u2082\nMAX (%)'], ['co', 'CO MAX\n(mg/kWh)'], ['rendement', 'Rendement\nMIN (%)']];
+      ? [['co_ppm', 'CO MAX\n\u00e0 13% O2\n(ppm)'], ['rendement', 'Rendement\nMIN (%)']]
+      : [['t_nette', 'T\u00b0 nette\nfum\u00e9es\nMAX (\u00b0C)'], ['co2', 'CO2\nMIN (%)'], ['o2', 'O2\nMAX (%)'], ['co', 'CO MAX\n(mg/kWh)'], ['rendement', 'Rendement\nMIN (%)']];
 
     var lblW = 140;
     var dw   = (PW - lblW) / colDefs.length;
@@ -383,7 +428,8 @@ function generateAttestation(data) {
     var rOk = data.resultat_combustion === 'OK';
     var rNok = data.resultat_combustion === 'NOK';
     fillRRect(ML, y, PW, 32, rOk ? C.greenBg : rNok ? C.redBg : C.grayLight, rOk ? C.greenBord : rNok ? C.redBord : C.line, 4);
-    t((rOk ? '\u2713' : rNok ? '\u2717' : '') + '  R\u00c9SULTAT GLOBAL COMBUSTION : ' + (data.resultat_combustion || '\u2014'), ML + 14, y + 10, { bold: true, size: 12, color: rOk ? C.green : rNok ? C.red : C.textMid });
+    if (rOk || rNok) checkIcon(ML + 14, y + 9, rOk, 13, rOk ? C.green : C.red);
+    t('R\u00c9SULTAT GLOBAL COMBUSTION : ' + (data.resultat_combustion || '\u2014'), ML + (rOk || rNok ? 34 : 14), y + 10, { bold: true, size: 12, color: rOk ? C.green : rNok ? C.red : C.textMid });
     y += 40;
 
     // ───────────────────────────────────────
@@ -394,12 +440,13 @@ function generateAttestation(data) {
 
     fillRRect(ML, y, PW, 50, confOk ? C.greenBg : C.redBg, confOk ? C.greenBord : C.redBord, 4);
     t("L'ensemble installation \u2014 ventilation \u2014 amen\u00e9e d'air \u2014 \u00e9vacuation gaz est-il conforme \u00e0 l'AGW ?", ML + 14, y + 8, { size: 9, color: confOk ? C.green : C.red, width: PW - 28 });
-    t((confOk ? '\u2713' : '\u2717') + '  ' + (conf || '\u2014').toUpperCase(), ML + 14, y + 26, { bold: true, size: 18, color: confOk ? C.green : C.red });
+    checkIcon(ML + 14, y + 24, confOk, 15, confOk ? C.green : C.red);
+    t((conf || '\u2014').toUpperCase(), ML + 36, y + 26, { bold: true, size: 18, color: confOk ? C.green : C.red });
     y += 58;
 
     if (data.causes_non_conformite) {
       fillRRect(ML, y, PW, 20, C.orangeBg, C.orangeBord, 3);
-      t('\u26a0  Causes de non-conformit\u00e9 et actions \u00e0 entreprendre :', ML + 10, y + 6, { bold: true, size: 9, color: C.orange });
+      t('Causes de non-conformit\u00e9 et actions \u00e0 entreprendre :', ML + 10, y + 6, { bold: true, size: 9, color: C.orange });
       y += 24;
       var cH = Math.max(36, doc.heightOfString(data.causes_non_conformite, { width: PW - 22 }) + 16);
       fillRRect(ML, y, PW, cH, '#FFFAF4', C.orangeBord, 3);
@@ -431,10 +478,10 @@ function generateAttestation(data) {
 
     var intv = [
       ['Mise en conformit\u00e9 au plus tard le :', data.mise_conformite_date],
-      ['Prochain contr\u00f4le p\u00e9riodique entre :', [data.prochain_controle_debut, data.prochain_controle_fin].filter(Boolean).join(' \u2192 ')],
+      ['Prochain contr\u00f4le p\u00e9riodique entre :', [data.prochain_controle_debut, data.prochain_controle_fin].filter(Boolean).join(' \u2013 ')],
       ['Prochain entretien constructeur au plus tard le :', data.prochain_entretien],
       ['Analyse de combustion (DA) au plus tard le :', data.prochaine_da],
-    ].filter(function(r) { return r[1] && r[1].trim() && r[1].trim() !== '\u2192'; });
+    ].filter(function(r) { return r[1] && r[1].trim() && r[1].trim() !== '\u2013'; });
 
     if (intv.length) {
       y = subHeader(y, 'PROCHAINES INTERVENTIONS');
@@ -465,7 +512,7 @@ function generateAttestation(data) {
     // Mention urgence
     y = checkPage(y, 30);
     fillRRect(ML, y, PW, 28, C.redBg, C.redBord, 3);
-    t('\u26a0  ATTENTION \u2014 En cas de danger : Secours ORES 0800 87 087  |  SOS gaz EANDIS/FLUXYS 0800 65 065  |  Urgences 100/112', ML + 10, y + 6, { bold: true, size: 8, color: C.red, width: PW - 20 });
+    t('ATTENTION \u2014 En cas de danger : Secours ORES 0800 87 087  |  SOS gaz EANDIS/FLUXYS 0800 65 065  |  Urgences 100/112', ML + 10, y + 6, { bold: true, size: 8, color: C.red, width: PW - 20 });
     t("En cas de non-conformit\u00e9, l'utilisateur et le propri\u00e9taire sont avertis. Un \u00e9crit sign\u00e9 leur est remis, chacun en recevant une copie.", ML + 10, y + 17, { size: 7.5, color: '#9B1C1C', width: PW - 20 });
 
     // Footers toutes pages

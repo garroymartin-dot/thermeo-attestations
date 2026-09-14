@@ -51,12 +51,12 @@ Pour mettre à jour l'application :
 ```
 thermeo-attestations/
 ├── public/
-│   └── index.html          ← Application web complète
+│   └── index.html            ← Application web complète
 ├── netlify/
 │   └── functions/
-│       ├── generate-pdf.js  ← Proxy API + appel Python
-│       └── generate_pdf.py  ← Générateur PDF ReportLab
-├── netlify.toml             ← Configuration Netlify
+│       ├── generate-pdf.js   ← Fonction serverless : validation clé API + réponse
+│       └── pdf-generator.js  ← Générateur PDF (pdfkit)
+├── netlify.toml              ← Configuration Netlify
 ├── package.json
 └── README.md
 ```
