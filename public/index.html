@@ -173,10 +173,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
       <h1>Thermeo — Attestations</h1>
       <p>AGW 29/01/2009 · Région wallonne · TGI 467</p>
     </div>
-    <div class="type-switch">
-      <button class="tsw on" id="tsw-r" onclick="setType('reception')">Réception</button>
-      <button class="tsw" id="tsw-p" onclick="setType('periodique')">Périodique</button>
-    </div>
   </div>
   <div class="prog-wrap">
     <div class="prog-bar" id="pgbar"></div>
@@ -210,7 +206,8 @@ const CATALOG = {
 
 const COL_LABELS = {t_nette:"T° nette\nMAX (°C)",co2:"CO₂ MIN\n(%)",o2:"O₂ MAX\n(%)",co:"CO MAX\n(mg/kWh)",rendement:"Rendement\nMIN (%)",co_ppm:"CO MAX\nà 13%O₂ (ppm)",indice_fumee:"Indice fumée\nMAX (Bach.)"};
 const COL_MAX = {t_nette:true,co:true,co2:false,o2:true,rendement:false,co_ppm:true,indice_fumee:true};
-const NATURES = ["Contrôle périodique","Après 1ère non-conformité","Après 2ème non-conformité","Remise en fonctionnement","Après intervention combustion"];
+const RECEPTION_GAZ = "Réception d'installation de chauffage central (gaz)";
+const NATURES = [RECEPTION_GAZ,"Contrôle périodique","Après 1ère non-conformité","Après 2ème non-conformité","Remise en fonctionnement","Après intervention combustion"];
 const QUALITES = ["Propriétaire","Locataire","Syndic","Gestionnaire","Autre"];
 const YESNO = ["Oui","Non"];
 const CONFORM3 = ["Conforme","Non conforme","Pas applicable"];
@@ -220,7 +217,6 @@ const PROD3 = ["Chauffage","ECS","Chauffage + ECS"];
 const PERMIS2 = ["Avant le 29/05/2009","Après le 29/05/2009"];
 
 // ══ STATE ══
-let TYPE = "reception";
 let STEP = 0;
 let D = {
   tech_nom:TECH.nom,tech_agrement:TECH.agrement,tech_entreprise:TECH.entreprise,
@@ -241,12 +237,26 @@ function today(){const d=new Date();return`${String(d.getDate()).padStart(2,'0')
 function cat(){return CATALOG[D.combustible]||CATALOG["Gaz - Unit - Prémix - Condensation"];}
 function isPellet(){return !!cat().is_pellet;}
 function isAtmo(){return D.combustible.includes("Atmosphérique");}
+function isReception(){return D.nature_controle===RECEPTION_GAZ;}
+function gasCombustibleKeys(){return Object.keys(CATALOG).filter(k=>k.startsWith('Gaz'));}
 
-const STEPS = ["Identification","Générateur","Installation","Régulation","Combustion","Bilan"];
+const STEPS_PERIODIQUE = ["Identification","Générateur","Installation","Régulation","Combustion","Bilan"];
+const STEPS_RECEPTION  = ["Administratif","Chaudière","Combustion","Conformité","Échéances"];
+function STEPS(){return isReception()?STEPS_RECEPTION:STEPS_PERIODIQUE;}
 
-function setType(t){TYPE=t;document.getElementById('tsw-r').className='tsw'+(t==='reception'?' on':'');document.getElementById('tsw-p').className='tsw'+(t==='periodique'?' on':'');STEP=0;render();}
+function onNatureChange(){
+  const sel=document.querySelector('[data-f="nature_controle"]');
+  if(!sel)return;
+  D.nature_controle=sel.value;
+  if(isReception()&&!gasCombustibleKeys().includes(D.combustible)){
+    D.combustible=gasCombustibleKeys()[0];
+    const ct=CATALOG[D.combustible];
+    D.raccordement=ct.raccordements[0]||'';D.type_bruleur=ct.bruleurs[0]||'';D.fluide=ct.fluides[0]||'Eau';D.condensation=ct.condensation||'Non';
+  }
+  render();
+}
 function prev(){if(STEP>0){save();STEP--;render();window.scrollTo(0,0);}}
-function next(){save();if(STEP<STEPS.length-1){STEP++;render();window.scrollTo(0,0);}else{genPDF();}}
+function next(){save();if(STEP<STEPS().length-1){STEP++;render();window.scrollTo(0,0);}else{genPDF();}}
 function jump(i){save();STEP=i;render();window.scrollTo(0,0);}
 
 function save(){document.querySelectorAll('[data-f]').forEach(el=>{D[el.dataset.f]=el.value;});calcConf();}
@@ -290,10 +300,10 @@ function onCombustibleChange(){
   window.scrollTo(0,scrollY);
 }
 function fta(id,lbl,val){return`<div class="fld"><label>${lbl}</label><textarea data-f="${id}">${val||''}</textarea></div>`;}
-function cr(id,lbl,val,opts){
+function cr(id,lbl,val,opts,onchg){
   opts=opts||CONFORM3;
   const os=opts.map(o=>`<option value="${o}" ${(val||'')==o?'selected':''}>${o}</option>`).join('');
-  return`<div class="chk-row"><label>${lbl}</label><select data-f="${id}">${os}</select></div>`;
+  return`<div class="chk-row"><label>${lbl}</label><select data-f="${id}" ${onchg||''}>${os}</select></div>`;
 }
 function cmpCell(v,id){
   if(!v)return`<span class="s-na" id="${id||''}">—</span>`;
@@ -303,7 +313,15 @@ function cmpCell(v,id){
 
 // ── STEPS ──
 function renderStep(){
-  const s=STEPS[STEP];
+  const s=STEPS()[STEP];
+  if(isReception()){
+    if(s==="Administratif")return sIdent();
+    if(s==="Chaudière")return sGen();
+    if(s==="Combustion")return sCombust();
+    if(s==="Conformité")return rConformiteReception();
+    if(s==="Échéances")return rEcheancesReception();
+    return '';
+  }
   if(s==="Identification")return sIdent();
   if(s==="Générateur")return sGen();
   if(s==="Installation")return sInstall();
@@ -311,6 +329,59 @@ function renderStep(){
   if(s==="Combustion")return sCombust();
   if(s==="Bilan")return sBilan();
   return '';
+}
+
+// ── VOLET RÉCEPTION CHAUFFAGE GAZ ──
+function onConformiteChange(){
+  const sel=document.querySelector('[data-f="v4_conformite"]');
+  if(sel)D.v4_conformite=sel.value;
+  const scrollY=window.scrollY;
+  document.getElementById('main').innerHTML=renderStep();
+  window.scrollTo(0,scrollY);
+}
+
+function rConformiteReception(){
+  const d=D;calcConf();
+  const contradiction=d.v4_conformite==='Conforme'&&d.resultat_combustion==='NOK';
+  return`
+<div class="card">
+  <div class="card-title">Déclaration de conformité</div>
+  <div class="chk-group">
+    ${cr('v4_conformite','Installation conforme ?',d.v4_conformite,['Conforme','Non conforme','Conforme avec conditions'],'onchange="onConformiteChange()"')}
+  </div>
+  ${contradiction?'<div class="alert alert-orange" style="margin-top:10px">⚠ Les mesures de combustion sont non conformes : vérifiez la déclaration ci-dessus.</div>':''}
+  ${d.v4_conformite==='Non conforme'?fta('v4_raison','Si non-conforme : causes',d.v4_raison):''}
+  ${d.v4_conformite==='Conforme avec conditions'?fta('v4_conditions','Si conforme avec conditions : détail',d.v4_conditions):''}
+  ${fta('v4_dangers','Dangers identifiés (optionnel)',d.v4_dangers)}
+</div>`;
+}
+
+function parseFRDate(s){
+  const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((s||'').trim());
+  if(!m)return null;
+  return new Date(parseInt(m[3],10),parseInt(m[2],10)-1,parseInt(m[1],10));
+}
+function fmtFRDate(dt){return`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;}
+function computeEcheancesReception(){
+  const base=parseFRDate(D.date);
+  if(!base)return{inspection:'—',entretien:'—'};
+  const insp=new Date(base);insp.setFullYear(insp.getFullYear()+2);
+  return{inspection:`${fmtFRDate(insp)} (2 ans après réception)`,entretien:`Avant le 01/09/${base.getFullYear()+1}`};
+}
+
+function rEcheancesReception(){
+  const ech=computeEcheancesReception();
+  return`
+<div class="card">
+  <div class="card-title">Prochaines interventions</div>
+  <div class="grid-2">
+    ${fld('reception_inspection','Prochaine inspection périodique',ech.inspection,true)}
+    ${fld('reception_entretien','Entretien annuel obligatoire',ech.entretien,true)}
+  </div>
+</div>
+<div style="padding:16px;text-align:center">
+  <button class="btn btn-success" onclick="genPDF()" style="width:100%;max-width:320px;padding:14px;font-size:15px;border-radius:12px">⬇ Générer l'attestation PDF</button>
+</div>`;
 }
 
 function sIdent(){const d=D;return`
@@ -323,7 +394,7 @@ function sIdent(){const d=D;return`
   <div class="slbl">Attestation</div>
   <div class="grid-2">
     ${fld('n_rapport','N° attestation',d.n_rapport)}${fld('date','Date',d.date)}
-    ${fld('nature_controle','Nature du contrôle',d.nature_controle,false,null,NATURES)}
+    ${fld('nature_controle','Nature du contrôle',d.nature_controle,false,null,NATURES,null,'onchange="onNatureChange()"')}
     ${fld('ramonage','Ramonage effectué',d.ramonage,false,null,YESNO)}
   </div>
 </div>
@@ -346,12 +417,13 @@ function sIdent(){const d=D;return`
 function sGen(){
   const d=D;const ct=cat();
   const marqOpts=["Autre",...ct.marques];
+  const combustibleOpts=isReception()?gasCombustibleKeys():Object.keys(CATALOG);
   return`
 <div class="card">
   <div class="card-title">Type d'appareil ${isPellet()?'<span class="badge badge-pellet">🌾 Pellet</span>':''}</div>
   <div class="alert alert-info">${ct.note}</div>
   <div class="grid-2">
-    ${fld('combustible','Type / Combustible',d.combustible,false,null,Object.keys(CATALOG),'','onchange="onCombustibleChange()"')}
+    ${fld('combustible','Type / Combustible',d.combustible,false,null,combustibleOpts,'','onchange="onCombustibleChange()"')}
     ${fld('raccordement','Raccordement / évacuation',d.raccordement,false,null,ct.raccordements)}
     ${fld('type_bruleur','Type brûleur',d.type_bruleur,false,null,ct.bruleurs)}
     ${fld('condensation','Condensation',d.condensation,false,null,YESNO)}
@@ -551,7 +623,13 @@ async function genPDF(){
   const ct=cat();
   const pmSimple={};Object.entries(ct.perf||{}).forEach(([k,v])=>{pmSimple[k]=v;});
   const valsComb={};(ct.cols||[]).forEach(k=>{valsComb[k]=D[`val_${k}`]||'';});
-  const payload=Object.assign({},D,{type_attestation:TYPE,perf_min:pmSimple,valeurs_combustion:valsComb,is_pellet:isPellet()});
+  const ech=isReception()?computeEcheancesReception():null;
+  const payload=Object.assign({},D,{
+    type_attestation:isReception()?'reception':'periodique',
+    perf_min:pmSimple,valeurs_combustion:valsComb,is_pellet:isPellet(),
+    reception_inspection:ech?ech.inspection:undefined,
+    reception_entretien:ech?ech.entretien:undefined
+  });
 
   showOverlay('Génération du PDF en cours...');
   try{
@@ -620,17 +698,18 @@ function showToast(msg, isError){
 
 // ── RENDER ──
 function render(){
-  document.getElementById('pgbar').innerHTML=STEPS.map((s,i)=>`<div class="prog-step ${i<STEP?'done':i===STEP?'active':''}" onclick="jump(${i})" title="${s}"></div>`).join('');
-  document.getElementById('prog-lbl').textContent=STEPS[STEP];
-  document.getElementById('step-lbl').textContent=`${STEPS[STEP]} · ${STEP+1}/${STEPS.length}`;
+  const steps=STEPS();
+  document.getElementById('pgbar').innerHTML=steps.map((s,i)=>`<div class="prog-step ${i<STEP?'done':i===STEP?'active':''}" onclick="jump(${i})" title="${s}"></div>`).join('');
+  document.getElementById('prog-lbl').textContent=steps[STEP];
+  document.getElementById('step-lbl').textContent=`${steps[STEP]} · ${STEP+1}/${steps.length}`;
   document.getElementById('btn-prev').style.visibility=STEP===0?'hidden':'visible';
-  const last=STEP===STEPS.length-1;
+  const last=STEP===steps.length-1;
   const nb=document.getElementById('btn-next');
   nb.textContent=last?'⬇ Générer PDF':'Suivant →';
   nb.className=last?'btn btn-success':'btn btn-primary';
   document.getElementById('main').innerHTML=renderStep();
-  if(STEPS[STEP]==='Combustion')liveUpd();
-  if(STEPS[STEP]==='Installation'){
+  if(steps[STEP]==='Combustion')liveUpd();
+  if(steps[STEP]==='Installation'){
     liveV1b();
     document.querySelectorAll('[data-f]').forEach(el=>{if(el.tagName==='SELECT')el.addEventListener('change',liveV1b);});
   }

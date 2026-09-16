@@ -1,4 +1,4 @@
-const { generateAttestation } = require('./pdf-generator');
+const { generateAttestation, generateReceptionGaz } = require('./pdf-generator');
 
 const HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -32,8 +32,10 @@ exports.handler = async (event) => {
     try { data = JSON.parse(event.body).data; if (!data) throw new Error('data manquant'); }
     catch (e) { return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Requête invalide : ' + e.message }) }; }
 
-    // Génération PDF
-    const pdfBuffer = await generateAttestation(data);
+    // Génération PDF — routage selon le type d'attestation
+    const pdfBuffer = data.type_attestation === 'reception'
+      ? await generateReceptionGaz(data)
+      : await generateAttestation(data);
     const nomClient = (data.client_nom || 'client').replace(/[^a-zA-Z0-9]/g, '_');
     const nomFichier = `Attestation_${data.n_rapport || 'thermeo'}_${nomClient}.pdf`;
 
