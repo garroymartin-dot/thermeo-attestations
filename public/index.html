@@ -194,15 +194,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 // ══ CONFIG ══
 const TECH = {nom:"Martin Garroy",agrement:"TGI 467",entreprise:"Thermeo",tel:"0478/655033",email:"Contact@thermeo.be",nentreprise:"BE0755731354",oca:"Non"};
 
-const CATALOG = {
-  "Gaz - Unit - Prémix - Condensation":{raccordements:["C13","C13x","C33","C43","C53","C63","C93"],bruleurs:["Modulant"],marques:["Vaillant","Bulex","De Dietrich","Bosch","Viessmann","Baxi","Remeha","Ariston","Chaffoteaux","Saunier Duval","Atlantic","Daikin Altherma"],condensation:"Oui",fluides:["Eau"],perf:{t_nette:"60",co:"110",rendement:"90"},cols:["t_nette","co","rendement"],note:"Chaudière gaz à condensation (ventouse étanche). Vérifier le siphon de condensats."},
-  "Gaz - Unit - Non-prémix - Condensation":{raccordements:["C13","C33","C43","C53","C93"],bruleurs:["Modulant","1 Allure"],marques:["Junkers","Bulex","Atlantic","Elm Leblanc"],condensation:"Oui",fluides:["Eau"],perf:{t_nette:"80",co:"150",rendement:"88"},cols:["t_nette","co","rendement"],note:"Chaudière gaz condensation — brûleur non-prémix."},
-  "Gaz - Unit - Basse température":{raccordements:["B11","B11BS","B23","C13","C33"],bruleurs:["Modulant","1 Allure"],marques:["Vaillant","Bulex","Viessmann","Remeha","De Dietrich"],condensation:"Non",fluides:["Eau"],perf:{t_nette:"180",co:"110",rendement:"90"},cols:["t_nette","co","rendement"],note:"Chaudière gaz basse température."},
-  "Gaz - Air pulsé":{raccordements:["B11","B11BS","B12","B13","B23","C13"],bruleurs:["1 Allure","Plusieurs allures","Modulant"],marques:["Riello","Weishaupt","Baltur","Elco","Cuenod"],condensation:"Non",fluides:["Eau","Vapeur basse pression","Huile thermique"],perf:{t_nette:"200",co2:"8.5",co:"110",rendement:"90"},cols:["t_nette","co2","co","rendement"],note:"Générateur gaz à brûleur air pulsé. Mesure CO₂ requise."},
-  "Gaz - Atmosphérique (type B)":{raccordements:["B11","B11BS","B12","B13","B14","B23","B33","B53"],bruleurs:["1 Allure","Plusieurs allures"],marques:["Vaillant","Bulex","De Dietrich","Junkers","Saunier Duval"],condensation:"Non",fluides:["Eau"],perf:{t_nette:"200",co2:"8.5",co:"110",rendement:"88"},cols:["t_nette","co2","co","rendement"],note:"Appareil atmosphérique type B — vérifier tirage cheminée (< -5 Pa)."},
-  "Pellet - Poêle (EN 14785)":{raccordements:["Conduit individuel vertical","Conduit individuel horizontal","Sortie directe façade","Conduit collectif"],bruleurs:["Modulant","1 Allure"],marques:["MCZ","Piazzetta","Edilkamin","La Nordica","Rika","Austroflamm","Palazzetti","Haas+Sohn","Biotech","Windhager","Stuv","CMG"],condensation:"Non",fluides:["Air"],perf:{co_ppm:"500",rendement:"85"},cols:["co_ppm","rendement"],is_pellet:true,note:"🌾 Poêle à pellet — CO en ppm à 13% O₂ (EN 14785). Rendement ≥ 85%."},
-  "Pellet - Chaudière (EN 303-5)":{raccordements:["Conduit individuel vertical","Conduit collectif","Autre"],bruleurs:["Modulant","1 Allure"],marques:["Windhager","Biotech","Fröling","KWB","Herz","Viessmann","Buderus","Okofen","Gilles","HDG"],condensation:"Non",fluides:["Eau"],perf:{co_ppm:"500",rendement:"87"},cols:["co_ppm","rendement"],is_pellet:true,note:"🌾 Chaudière à pellet — CO en ppm à 13% O₂ (EN 303-5). Rendement ≥ 87%."},
-};
+let CATALOG = null; // chargé de manière asynchrone depuis /js/catalog.json (voir loadCatalog())
 
 const COL_LABELS = {t_nette:"T° nette\nMAX (°C)",co2:"CO₂ MIN\n(%)",o2:"O₂ MAX\n(%)",co:"CO MAX\n(mg/kWh)",rendement:"Rendement\nMIN (%)",co_ppm:"CO MAX\nà 13%O₂ (ppm)",indice_fumee:"Indice fumée\nMAX (Bach.)"};
 const COL_MAX = {t_nette:true,co:true,co2:false,o2:true,rendement:false,co_ppm:true,indice_fumee:true};
@@ -232,7 +224,7 @@ let D = {
   pompe_mode:"Automatique",pompe_dysfonctionnement:"Non",localisation_gen:"IDEM",
 };
 
-function genN(){const d=new Date();return`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-1`;}
+function genN(){const d=new Date();const rand=Math.random().toString(36).slice(2,6).toUpperCase();return`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${rand}`;}
 function today(){const d=new Date();return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;}
 function cat(){return CATALOG[D.combustible]||CATALOG["Gaz - Unit - Prémix - Condensation"];}
 function isPellet(){return !!cat().is_pellet;}
@@ -247,6 +239,12 @@ function STEPS(){return isReception()?STEPS_RECEPTION:STEPS_PERIODIQUE;}
 function onNatureChange(){
   const sel=document.querySelector('[data-f="nature_controle"]');
   if(!sel)return;
+  const wasReception=isReception();
+  const willBeReception=sel.value===RECEPTION_GAZ;
+  if(wasReception!==willBeReception&&!confirm('Changer de type de rapport peut réinitialiser certains champs déjà saisis. Continuer ?')){
+    sel.value=D.nature_controle;
+    return;
+  }
   D.nature_controle=sel.value;
   if(isReception()&&!gasCombustibleKeys().includes(D.combustible)){
     D.combustible=gasCombustibleKeys()[0];
@@ -259,7 +257,11 @@ function prev(){if(STEP>0){save();STEP--;render();window.scrollTo(0,0);}}
 function next(){save();if(STEP<STEPS().length-1){STEP++;render();window.scrollTo(0,0);}else{genPDF();}}
 function jump(i){save();STEP=i;render();window.scrollTo(0,0);}
 
-function save(){document.querySelectorAll('[data-f]').forEach(el=>{D[el.dataset.f]=el.value;});calcConf();}
+const DRAFT_KEY='thermeo_draft_v1';
+function save(){document.querySelectorAll('[data-f]').forEach(el=>{D[el.dataset.f]=el.value;});calcConf();saveDraft();}
+function saveDraft(){try{localStorage.setItem(DRAFT_KEY,JSON.stringify({D,STEP}));}catch(e){}}
+function loadDraft(){try{const raw=localStorage.getItem(DRAFT_KEY);return raw?JSON.parse(raw):null;}catch(e){return null;}}
+function clearDraft(){try{localStorage.removeItem(DRAFT_KEY);}catch(e){}}
 
 function calcConf(){
   const ct=cat(),pm=ct.perf||{},cols=ct.cols||[];
@@ -566,6 +568,7 @@ function sBilan(){
   const conf=d.declaration_conformite;const v2=d.v2_global;const comb=d.resultat_combustion;
   const ok=(v,t)=>v===t?`<span style="color:var(--green)">✓ ${t}</span>`:`<span style="color:var(--red)">✗ ${v||'—'}</span>`;
   return`
+${!d._installVisited?'<div class="alert alert-orange">⚠ Volet 1B (Installation) non consulté — les vérifications de raccordement, ventilation et documents n\'ont pas été relues pour ce rapport. Le résultat ci-dessous reflète uniquement leurs valeurs par défaut.</div>':''}
 <div class="card">
   <div class="card-title">Bilan de conformité AGW</div>
   <div class="bilan-grid">
@@ -618,6 +621,13 @@ function liveUpd(){
 }
 
 // ── PDF GENERATION ──
+const APP_PWD_KEY='thermeo_app_pwd';
+function getAppPassword(){
+  let p=localStorage.getItem(APP_PWD_KEY);
+  if(!p){p=window.prompt('Mot de passe pour générer un rapport :')||'';localStorage.setItem(APP_PWD_KEY,p);}
+  return p;
+}
+
 async function genPDF(){
   save();calcConf();
   const ct=cat();
@@ -635,15 +645,17 @@ async function genPDF(){
   try{
     const resp = await fetch('/api/generate-pdf',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','X-App-Password':getAppPassword()},
       body:JSON.stringify({data:payload})
     });
+    if(resp.status===401){localStorage.removeItem(APP_PWD_KEY);}
     if(!resp.ok){
       const e=await resp.json();
       throw new Error(e.error||'Erreur serveur');
     }
     const result = await resp.json();
     hideOverlay();
+    clearDraft();
 
     // Décoder le base64 et déclencher le téléchargement
     const byteChars = atob(result.pdf);
@@ -710,11 +722,24 @@ function render(){
   document.getElementById('main').innerHTML=renderStep();
   if(steps[STEP]==='Combustion')liveUpd();
   if(steps[STEP]==='Installation'){
+    D._installVisited=true;
     liveV1b();
     document.querySelectorAll('[data-f]').forEach(el=>{if(el.tagName==='SELECT')el.addEventListener('change',liveV1b);});
   }
 }
-render();
+
+// ── BOOTSTRAP ──
+async function loadCatalog(){
+  const resp=await fetch('/js/catalog.json');
+  CATALOG=await resp.json();
+}
+loadCatalog().then(()=>{
+  const draft=loadDraft();
+  if(draft&&confirm('Un rapport en cours de saisie a été trouvé. Voulez-vous le reprendre ?')){
+    D=draft.D;STEP=draft.STEP||0;
+  }
+  render();
+});
 </script>
 </body>
 </html>

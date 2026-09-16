@@ -15,14 +15,19 @@ Application web de génération d'attestations de réception et contrôle pério
    - **Publish directory** : `public`
 5. Cliquez **"Deploy site"**
 
-### Étape 2 — Configurer la clé API Anthropic
+### Étape 2 — Configurer les variables d'environnement
 
-1. Dans Netlify → votre site → **Site configuration** → **Environment variables**
-2. Cliquez **"Add a variable"**
-3. Key : `ANTHROPIC_API_KEY`
-4. Value : votre clé API (trouvable sur [console.anthropic.com](https://console.anthropic.com) → API Keys)
-5. Cliquez **"Save"**
-6. Allez dans **Deploys** → **"Trigger deploy"** → **"Deploy site"** pour redémarrer
+Dans Netlify → votre site → **Site configuration** → **Environment variables** → **"Add a variable"** :
+
+| Key | Value | Obligatoire |
+|---|---|---|
+| `APP_PASSWORD` | Un mot de passe de votre choix, à communiquer aux techniciens autorisés. Protège la génération de PDF : sans lui, l'application refuse de créer une attestation. | **Oui** |
+| `RESEND_API_KEY` | Clé API [Resend](https://resend.com) (compte gratuit). Permet d'archiver automatiquement par e-mail une copie de chaque attestation générée, envoyée à `contact@thermeo.be`. Sans cette variable, l'archivage est simplement désactivé (la génération de PDF continue de fonctionner). | Non |
+| `RESEND_FROM` | Adresse d'expédition des e-mails d'archivage. Par défaut `Thermeo Attestations <onboarding@resend.dev>` (fonctionne sans configuration de domaine, adapté à un usage interne à faible volume). | Non |
+
+Après ajout des variables : **Deploys** → **"Trigger deploy"** → **"Deploy site"** pour redémarrer.
+
+> L'identité du technicien (nom, agréation, coordonnées) est fixée en dur côté serveur (`netlify/functions/generate-pdf.js`) et ne peut pas être modifiée depuis le formulaire — cela empêche qu'une attestation usurpe le nom ou le numéro d'agréation du technicien.
 
 ### Étape 3 — Votre URL
 
@@ -51,22 +56,26 @@ Pour mettre à jour l'application :
 ```
 thermeo-attestations/
 ├── public/
-│   └── index.html          ← Application web complète
+│   ├── index.html            ← Application web complète
+│   └── js/
+│       └── catalog.json      ← Catalogue des types d'appareils (modifiable sans toucher au code)
 ├── netlify/
 │   └── functions/
-│       ├── generate-pdf.js  ← Proxy API + appel Python
-│       └── generate_pdf.py  ← Générateur PDF ReportLab
-├── netlify.toml             ← Configuration Netlify
+│       ├── generate-pdf.js    ← Fonction API : authentification, routage, archivage
+│       └── pdf-generator.js   ← Générateur PDF (PDFKit)
+├── netlify.toml               ← Configuration Netlify
 ├── package.json
 └── README.md
 ```
+
+Pour ajouter un type d'appareil ou une marque, il suffit d'éditer `public/js/catalog.json` (aucune modification de code, aucune connaissance en programmation requise) et de pousser le changement — Netlify redéploie automatiquement.
 
 ---
 
 ## Coût estimé
 
 - **Netlify** : gratuit (125 000 requêtes/mois)
-- **API Anthropic** : ~0,001€ par attestation (validation données)
+- **Resend** (archivage e-mail, optionnel) : gratuit jusqu'à 100 e-mails/jour
 - **Total** : pratiquement gratuit pour un usage professionnel normal
 
 ---
