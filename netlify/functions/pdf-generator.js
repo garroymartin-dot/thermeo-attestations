@@ -562,6 +562,23 @@ function generateReceptionGaz(data) {
       hl(yy + h, ML, W - MR, C.line, 0.3);
       return yy + h;
     }
+    function statusRow(yy, label, value, bg) {
+      const h = 20;
+      const vx = ML + PW * 0.63;
+      const bw = PW * 0.35;
+      if (bg) fillRect(ML, yy, PW, h, bg);
+      t(label, ML + 8, yy + 6, { size: 8.5, color: C.text, width: PW * 0.59 });
+      const v = (value || '').toUpperCase().trim();
+      let bb = C.gray, bf = C.textMid;
+      if (['OUI','OK','CONFORME','PRESENT','PRÉSENT'].includes(v)) { bb = C.greenBg; bf = C.green; }
+      else if (['NON','NOK','NON CONFORME'].includes(v)) { bb = C.redBg; bf = C.red; }
+      else if (['PAS APPLICABLE','N/A'].includes(v)) { bb = C.gray; bf = C.textMid; }
+      else if (v) { bb = C.bluePale; bf = C.blue; }
+      fillRRect(vx, yy + 2, bw, h - 4, bb, null, 3);
+      t(value || '—', vx, yy + 5, { bold: true, size: 8, color: bf, width: bw, align: 'center' });
+      hl(yy + h, ML, W - MR, C.line, 0.3);
+      return yy + h;
+    }
     function checkPage(yy, needed) {
       if (yy + (needed || 60) > SAFE_BOTTOM) {
         doc.addPage();
@@ -641,6 +658,46 @@ function generateReceptionGaz(data) {
     y = kvRow2(y, ['N° de série :', data.gen_serie, 52], ['Fluide caloporteur :', data.fluide, 76], C.grayLight);
     y = kvRow(y, 'Production chaleur :', data.production, null);
     y += 14;
+
+    // ── VOLET 2B — VÉRIFICATIONS DE L'INSTALLATION ──
+    y = checkPage(y, 120);
+    y = secHeader(y, "VOLET 2B  —  VÉRIFICATIONS DE L'INSTALLATION");
+
+    var ch2b = [
+      ['1. Raccordement brûleur-chaudière (pas d’application si type unit)', data.v2r_raccordement],
+      ['2. Adéquation chaudière-brûleur (pas d’application si type unit)', data.v2r_adequation],
+      ['3. Orifice de mesure', data.v2r_orifice],
+    ];
+    ch2b.forEach(function(r, i) { y = statusRow(y, r[0], r[1], i % 2 === 0 ? C.grayLight : null); });
+
+    if ((data.combustible || '').includes('Atmosphérique')) {
+      y += 4;
+      y = subHeader(y, 'PRESSION DE CHEMINÉE (TYPE B À TIRAGE NATUREL)');
+      y = kvRow2(y,
+        ['Valeur à respecter, inférieure à :', (data.v2r_pression_seuil != null ? data.v2r_pression_seuil : (data.v2r_pression_prescrite_valeur || '-5')) + ' Pa', 130],
+        ['Mesurée :', (data.v2r_pression_mesuree || '—') + ' Pa', 60],
+        C.grayLight);
+      y = statusRow(y, 'Inférieure à la valeur à respecter ?', data.v2r_pression_conforme, null);
+      if (!(data.condensation === 'Oui')) {
+        y = statusRow(y, "Absence de présomption de condensation dans le conduit d’évacuation ?", data.v2r_condensation_absence, C.grayLight);
+      }
+      y += 6;
+    }
+
+    var ch2bSuite = [
+      ['Conformité ventilation du local de chauffe', data.v2r_ventilation],
+      ["Conformité amenée d'air comburant", data.v2r_air_comburant],
+      ['Conformité évacuation des gaz de combustion', data.v2r_evacuation],
+      ["Instructions d'utilisation et d'entretien", data.v2r_instructions],
+      ['Note de calcul du dimensionnement', data.v2r_dimensionnement],
+    ];
+    ch2bSuite.forEach(function(r, i) { y = statusRow(y, r[0], r[1], i % 2 === 0 ? C.grayLight : null); });
+
+    y += 6;
+    var v2rOk = data.v2r_global === 'Oui';
+    fillRRect(ML, y, PW, 28, v2rOk ? C.greenBg : C.redBg, v2rOk ? C.greenBord : C.redBord, 4);
+    t((v2rOk ? '✓' : '✗') + '  Conformité globale installation (Volet 2B) : ' + (v2rOk ? 'OUI' : 'NON'), ML + 14, y + 9, { bold: true, size: 10, color: v2rOk ? C.green : C.red });
+    y += 36;
 
     // ── VOLET 3 — MESURES COMBUSTION ──
     y = checkPage(y, 130);

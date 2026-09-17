@@ -203,6 +203,7 @@ const NATURES = [RECEPTION_GAZ,"Contrôle périodique","Après 1ère non-conform
 const QUALITES = ["Propriétaire","Locataire","Syndic","Gestionnaire","Autre"];
 const YESNO = ["Oui","Non"];
 const CONFORM3 = ["Conforme","Non conforme","Pas applicable"];
+const CONFORM2 = ["Conforme","Non conforme"];
 const OUINON_NA = ["Oui","Non","Pas applicable"];
 const PRESENT3 = ["Présent","Pas présent","Pas applicable"];
 const PROD3 = ["Chauffage","ECS","Chauffage + ECS"];
@@ -222,6 +223,9 @@ let D = {
   v2_evacuation:"Oui",v2_instructions:"Présent",v2_dimensionnement:"Pas applicable",
   reg_automatique:"Oui",reg_thermostat:"Oui",reg_horloge:"Oui",reg_programmation_nuit:"Oui",
   pompe_mode:"Automatique",pompe_dysfonctionnement:"Non",localisation_gen:"IDEM",
+  v2r_orifice:"Conforme",v2r_ventilation:"Oui",v2r_air_comburant:"Oui",v2r_evacuation:"Oui",
+  v2r_instructions:"Présent",v2r_dimensionnement:"Pas applicable",
+  v2r_pression_prescrite_connue:"Non",v2r_condensation_absence:"Oui",
 };
 
 function genN(){const d=new Date();const rand=Math.random().toString(36).slice(2,6).toUpperCase();return`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${rand}`;}
@@ -229,11 +233,12 @@ function today(){const d=new Date();return`${String(d.getDate()).padStart(2,'0')
 function cat(){return CATALOG[D.combustible]||CATALOG["Gaz - Unit - Prémix - Condensation"];}
 function isPellet(){return !!cat().is_pellet;}
 function isAtmo(){return D.combustible.includes("Atmosphérique");}
+function isUnit(){return D.combustible.includes("Unit");}
 function isReception(){return D.nature_controle===RECEPTION_GAZ;}
 function gasCombustibleKeys(){return Object.keys(CATALOG).filter(k=>k.startsWith('Gaz'));}
 
 const STEPS_PERIODIQUE = ["Identification","Générateur","Installation","Régulation","Combustion","Bilan"];
-const STEPS_RECEPTION  = ["Administratif","Chaudière","Combustion","Conformité","Échéances"];
+const STEPS_RECEPTION  = ["Administratif","Chaudière","Installation","Combustion","Conformité","Échéances"];
 function STEPS(){return isReception()?STEPS_RECEPTION:STEPS_PERIODIQUE;}
 
 function onNatureChange(){
@@ -283,7 +288,7 @@ function fld(id,lbl,val,pre,type,opts,_u,onchg){
     const os=opts.map(o=>`<option value="${o}" ${(val||'')==o?'selected':''}>${o}</option>`).join('');
     return`<div class="${cls}"><label>${lbl}</label><select data-f="${id}" ${onchg||''}>${os}</select></div>`;
   }
-  return`<div class="${cls}"><label>${lbl}</label><input type="${type||'text'}" data-f="${id}" value="${String(val||'')}" ${pre?'readonly':''}></div>`;
+  return`<div class="${cls}"><label>${lbl}</label><input type="${type||'text'}" data-f="${id}" value="${String(val||'')}" ${pre?'readonly':''} ${onchg||''}></div>`;
 }
 function onCombustibleChange(){
   const sel=document.querySelector('[data-f="combustible"]');
@@ -319,6 +324,7 @@ function renderStep(){
   if(isReception()){
     if(s==="Administratif")return sIdent();
     if(s==="Chaudière")return sGen();
+    if(s==="Installation")return sInstallReception();
     if(s==="Combustion")return sCombust();
     if(s==="Conformité")return rConformiteReception();
     if(s==="Échéances")return rEcheancesReception();
@@ -342,16 +348,102 @@ function onConformiteChange(){
   window.scrollTo(0,scrollY);
 }
 
-function rConformiteReception(){
-  const d=D;calcConf();
-  const contradiction=d.v4_conformite==='Conforme'&&d.resultat_combustion==='NOK';
+// ── VOLET 2B RÉCEPTION — VÉRIFICATIONS DE L'INSTALLATION ──
+function isCondensationAppareil(){return cat().condensation==='Oui';}
+
+function onInstallReceptionChange(){
+  save();
+  const scrollY=window.scrollY;
+  document.getElementById('main').innerHTML=renderStep();
+  window.scrollTo(0,scrollY);
+}
+
+function calcConfReception(){
+  const d=D;
+  if(isUnit()){
+    d.v2r_raccordement="Pas applicable";
+    d.v2r_adequation="Pas applicable";
+  }
+  // Pression de cheminée (uniquement générateurs type B à tirage naturel / atmosphériques)
+  if(isAtmo()){
+    const seuil=d.v2r_pression_prescrite_connue==='Oui'?parseFloat(d.v2r_pression_prescrite_valeur):-5;
+    const mesuree=parseFloat(d.v2r_pression_mesuree);
+    d.v2r_pression_seuil=isNaN(seuil)?null:seuil;
+    d.v2r_pression_conforme=(!isNaN(mesuree)&&!isNaN(seuil))?(mesuree<=seuil?'Oui':'Non'):'';
+  }
+  const checks=[];
+  if(!isUnit()){checks.push(d.v2r_raccordement,d.v2r_adequation);}
+  checks.push(d.v2r_orifice);
+  if(isAtmo()){
+    checks.push(d.v2r_pression_conforme);
+    if(!isCondensationAppareil())checks.push(d.v2r_condensation_absence);
+  }
+  checks.push(d.v2r_ventilation,d.v2r_air_comburant,d.v2r_evacuation,d.v2r_instructions,d.v2r_dimensionnement);
+  const bad=checks.some(v=>v==='Non conforme'||v==='Non');
+  d.v2r_global=checks.some(v=>v)?(bad?'Non':'Oui'):'';
+}
+
+function sInstallReception(){
+  const d=D;calcConfReception();
+  const unit=isUnit();const atmo=isAtmo();const condens=isCondensationAppareil();
   return`
+<div class="alert alert-info">Cochez chaque point selon vos constatations sur site.</div>
+<div class="card">
+  <div class="card-title">I — Raccordement & orifice de mesure</div>
+  <div class="chk-group">
+    ${unit?'<div class="chk-row"><label>1. Raccordement brûleur-chaudière</label><span class="s-na">Pas d\'application (générateur type unit)</span></div>':cr('v2r_raccordement','1. Raccordement brûleur-chaudière',d.v2r_raccordement,CONFORM2,'onchange="onInstallReceptionChange()"')}
+    ${unit?'<div class="chk-row"><label>2. Adéquation chaudière-brûleur</label><span class="s-na">Pas d\'application (générateur type unit)</span></div>':cr('v2r_adequation','2. Adéquation chaudière-brûleur',d.v2r_adequation,CONFORM2,'onchange="onInstallReceptionChange()"')}
+    ${cr('v2r_orifice','3. Orifice de mesure',d.v2r_orifice,CONFORM2,'onchange="onInstallReceptionChange()"')}
+  </div>
+</div>
+${atmo?`<div class="card">
+  <div class="card-title">4 — Pression de cheminée <span class="badge badge-orange">Type B à tirage naturel</span></div>
+  <div class="chk-group">
+    ${cr('v2r_pression_prescrite_connue','Valeur prescrite par le fabricant ?',d.v2r_pression_prescrite_connue,YESNO,'onchange="onInstallReceptionChange()"')}
+  </div>
+  <div class="grid-2" style="margin-top:10px">
+    ${d.v2r_pression_prescrite_connue==='Oui'?fld('v2r_pression_prescrite_valeur','Valeur à respecter, inférieure à (Pa)',d.v2r_pression_prescrite_valeur,false,'number',null,null,'onchange="onInstallReceptionChange()"'):''}
+    ${fld('v2r_pression_mesuree','Pression de cheminée mesurée (Pa)',d.v2r_pression_mesuree,false,'number',null,null,'onchange="onInstallReceptionChange()"')}
+  </div>
+  <div class="rbox ${d.v2r_pression_conforme==='Oui'?'rbox-ok':d.v2r_pression_conforme==='Non'?'rbox-nok':''}" style="${d.v2r_pression_conforme?'':'display:none'}">
+    Seuil applicable : ${d.v2r_pression_seuil!=null?d.v2r_pression_seuil:'—'} Pa — Mesure ${d.v2r_pression_conforme==='Oui'?'conforme':'non conforme'} (inférieure à la valeur à respecter : ${d.v2r_pression_conforme==='Oui'?'oui':'non'})
+  </div>
+  ${!condens?`<div class="chk-group" style="margin-top:10px">
+    ${cr('v2r_condensation_absence',"Absence de présomption de formation de condensation dans le conduit d'évacuation ?",d.v2r_condensation_absence,YESNO,'onchange="onInstallReceptionChange()"')}
+  </div>`:''}
+</div>`:''}
+<div class="card">
+  <div class="card-title">II — Ventilation & Évacuation</div>
+  <div class="chk-group">
+    ${cr('v2r_ventilation','Conformité ventilation du local de chauffe',d.v2r_ventilation,OUINON_NA,'onchange="onInstallReceptionChange()"')}
+    ${cr('v2r_air_comburant',"Conformité amenée d'air comburant",d.v2r_air_comburant,OUINON_NA,'onchange="onInstallReceptionChange()"')}
+    ${cr('v2r_evacuation','Conformité évacuation gaz de combustion',d.v2r_evacuation,OUINON_NA,'onchange="onInstallReceptionChange()"')}
+  </div>
+  ${d.conduit_type==='Collectif'?'<div class="alert alert-info" style="margin-top:10px">Conduit collectif : inclut la vérification de l\'absence de combinaisons de générateurs interdites.</div>':''}
+</div>
+<div class="card">
+  <div class="card-title">III & IV — Documents</div>
+  <div class="chk-group">
+    ${cr('v2r_instructions',"Instructions d'utilisation & d'entretien",d.v2r_instructions,PRESENT3,'onchange="onInstallReceptionChange()"')}
+    ${cr('v2r_dimensionnement','Note de calcul du dimensionnement',d.v2r_dimensionnement,PRESENT3,'onchange="onInstallReceptionChange()"')}
+  </div>
+</div>
+<div class="rbox ${d.v2r_global==='Oui'?'rbox-ok':d.v2r_global==='Non'?'rbox-nok':''}" style="${d.v2r_global?'':'display:none'}">
+  ${d.v2r_global==='Oui'?'✓ Installation conforme — Volet 2B : OUI':'✗ Non-conformité détectée — Volet 2B : NON'}
+</div>`;
+}
+
+function rConformiteReception(){
+  const d=D;calcConf();calcConfReception();
+  const contradiction=d.v4_conformite==='Conforme'&&(d.resultat_combustion==='NOK'||d.v2r_global==='Non');
+  return`
+${!d._installReceptionVisited?'<div class="alert alert-orange">⚠ Volet 2B (Installation) non consulté — les vérifications de raccordement, ventilation et documents n\'ont pas été relues pour ce rapport. Le résultat ci-dessous reflète uniquement leurs valeurs par défaut.</div>':''}
 <div class="card">
   <div class="card-title">Déclaration de conformité</div>
   <div class="chk-group">
     ${cr('v4_conformite','Installation conforme ?',d.v4_conformite,['Conforme','Non conforme','Conforme avec conditions'],'onchange="onConformiteChange()"')}
   </div>
-  ${contradiction?'<div class="alert alert-orange" style="margin-top:10px">⚠ Les mesures de combustion sont non conformes : vérifiez la déclaration ci-dessus.</div>':''}
+  ${contradiction?'<div class="alert alert-orange" style="margin-top:10px">⚠ Les mesures de combustion et/ou les vérifications d\'installation sont non conformes : vérifiez la déclaration ci-dessus.</div>':''}
   ${d.v4_conformite==='Non conforme'?fta('v4_raison','Si non-conforme : causes',d.v4_raison):''}
   ${d.v4_conformite==='Conforme avec conditions'?fta('v4_conditions','Si conforme avec conditions : détail',d.v4_conditions):''}
   ${fta('v4_dangers','Dangers identifiés (optionnel)',d.v4_dangers)}
@@ -630,6 +722,7 @@ function getAppPassword(){
 
 async function genPDF(){
   save();calcConf();
+  if(isReception())calcConfReception();
   const ct=cat();
   const pmSimple={};Object.entries(ct.perf||{}).forEach(([k,v])=>{pmSimple[k]=v;});
   const valsComb={};(ct.cols||[]).forEach(k=>{valsComb[k]=D[`val_${k}`]||'';});
@@ -722,9 +815,13 @@ function render(){
   document.getElementById('main').innerHTML=renderStep();
   if(steps[STEP]==='Combustion')liveUpd();
   if(steps[STEP]==='Installation'){
-    D._installVisited=true;
-    liveV1b();
-    document.querySelectorAll('[data-f]').forEach(el=>{if(el.tagName==='SELECT')el.addEventListener('change',liveV1b);});
+    if(isReception()){
+      D._installReceptionVisited=true;
+    }else{
+      D._installVisited=true;
+      liveV1b();
+      document.querySelectorAll('[data-f]').forEach(el=>{if(el.tagName==='SELECT')el.addEventListener('change',liveV1b);});
+    }
   }
 }
 
