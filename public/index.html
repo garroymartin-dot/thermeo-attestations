@@ -395,6 +395,7 @@ function sInstallReception(){
     ${unit?'<div class="chk-row"><label>2. Adéquation chaudière-brûleur</label><span class="s-na">Pas d\'application (générateur type unit)</span></div>':cr('v2r_adequation','2. Adéquation chaudière-brûleur',d.v2r_adequation,CONFORM2,'onchange="onInstallReceptionChange()"')}
     ${cr('v2r_orifice','3. Orifice de mesure',d.v2r_orifice,CONFORM2,'onchange="onInstallReceptionChange()"')}
   </div>
+  ${!unit?'<p style="font-size:11px;color:var(--text-muted);margin-top:8px">Point 2 : vérifier que la plage de puissance de fonctionnement du brûleur est bien incluse dans la plage de puissance pouvant être délivrée par la chaudière (documentation technique du brûleur et de la chaudière).</p>':''}
 </div>
 ${atmo?`<div class="card">
   <div class="card-title">4 — Pression de cheminée <span class="badge badge-orange">Type B à tirage naturel</span></div>
@@ -408,6 +409,7 @@ ${atmo?`<div class="card">
   <div class="rbox ${d.v2r_pression_conforme==='Oui'?'rbox-ok':d.v2r_pression_conforme==='Non'?'rbox-nok':''}" style="${d.v2r_pression_conforme?'':'display:none'}">
     Seuil applicable : ${d.v2r_pression_seuil!=null?d.v2r_pression_seuil:'—'} Pa — Mesure ${d.v2r_pression_conforme==='Oui'?'conforme':'non conforme'} (inférieure à la valeur à respecter : ${d.v2r_pression_conforme==='Oui'?'oui':'non'})
   </div>
+  <p style="font-size:11px;color:var(--text-muted);margin-top:8px">Mesure à effectuer en fonctionnement normal : température minimale de 60°C au thermomètre chaudière, local de chauffe fermé, et capot du brûleur ou de protection installé si d'application.</p>
   ${!condens?`<div class="chk-group" style="margin-top:10px">
     ${cr('v2r_condensation_absence',"Absence de présomption de formation de condensation dans le conduit d'évacuation ?",d.v2r_condensation_absence,YESNO,'onchange="onInstallReceptionChange()"')}
   </div>`:''}
@@ -419,6 +421,8 @@ ${atmo?`<div class="card">
     ${cr('v2r_air_comburant',"Conformité amenée d'air comburant",d.v2r_air_comburant,OUINON_NA,'onchange="onInstallReceptionChange()"')}
     ${cr('v2r_evacuation','Conformité évacuation gaz de combustion',d.v2r_evacuation,OUINON_NA,'onchange="onInstallReceptionChange()"')}
   </div>
+  ${d.permis_urbanisme==='Avant le 29/05/2009'?'<p style="font-size:11px;color:var(--text-muted);margin-top:8px">Permis avant le 29/05/2009 : le local de chauffe (amenée/évacuation d\'air et gaz de combustion) doit répondre aux prescriptions du Ministre de l\'Environnement ou, à défaut, au code de bonne pratique applicable au moment du placement de l\'installation.</p>':''}
+  ${d.permis_urbanisme==='Après le 29/05/2009'?'<p style="font-size:11px;color:var(--text-muted);margin-top:8px">Permis après le 29/05/2009 : respect, selon les cas, des normes NBN B61-001, B61-002, D51-003, D51-004, D51-006.</p>':''}
   ${d.conduit_type==='Collectif'?'<div class="alert alert-info" style="margin-top:10px">Conduit collectif : inclut la vérification de l\'absence de combinaisons de générateurs interdites.</div>':''}
 </div>
 <div class="card">
