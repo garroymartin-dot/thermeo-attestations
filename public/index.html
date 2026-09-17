@@ -199,7 +199,28 @@ let CATALOG = null; // chargé de manière asynchrone depuis /js/catalog.json (v
 const COL_LABELS = {t_nette:"T° nette\nMAX (°C)",co2:"CO₂ MIN\n(%)",o2:"O₂ MAX\n(%)",co:"CO MAX\n(mg/kWh)",rendement:"Rendement\nMIN (%)",co_ppm:"CO MAX\nà 13%O₂ (ppm)",indice_fumee:"Indice fumée\nMAX (Bach.)"};
 const COL_MAX = {t_nette:true,co:true,co2:false,o2:true,rendement:false,co_ppm:true,indice_fumee:true};
 const RECEPTION_GAZ = "Réception d'installation de chauffage central (gaz)";
-const NATURES = [RECEPTION_GAZ,"Contrôle périodique","Après 1ère non-conformité","Après 2ème non-conformité","Remise en fonctionnement","Après intervention combustion"];
+const ENTRETIEN_INDIVIDUEL = "Entretien appareil individuel au gaz (chauffe-eau / convecteur)";
+const NATURES = [RECEPTION_GAZ,ENTRETIEN_INDIVIDUEL,"Contrôle périodique","Après 1ère non-conformité","Après 2ème non-conformité","Remise en fonctionnement","Après intervention combustion"];
+
+// Appareils individuels au gaz — chauffe-eau et convecteurs autonomes, NON raccordés à un
+// circuit de chauffage central. Hors du champ d'application de l'AGW du 29/01/2009 (qui ne
+// vise que le chauffage central) : aucune périodicité légale wallonne identifiée pour ces
+// appareils. Checklist et valeurs indicatives inspirées de la norme NBN D51-003 (sécurité des
+// installations gaz) — à ne jamais présenter comme une attestation réglementaire AGW.
+const CATALOG_INDIVIDUEL = {
+  "Chauffe-eau à gaz (individuel)": {
+    raccordements: ["B11","B11BS","C11","C13","C13x"],
+    marques: ["Junkers","Vaillant","Ariston","Bulex","Chaffoteaux","Elm Leblanc","Saunier Duval","Autre"],
+    perfIndicative: {co_ppm:"400", rendement:"80"},
+    note: "Chauffe-eau à gaz individuel (production d'eau chaude sanitaire instantanée), non raccordé à un circuit de chauffage central."
+  },
+  "Convecteur à gaz (individuel)": {
+    raccordements: ["B11","B11BS","B22","C11","C13"],
+    marques: ["Faber","Qualiflam","Chappée","Brink","Auer","Autre"],
+    perfIndicative: {co_ppm:"400", rendement:"75"},
+    note: "Appareil de chauffage d'appoint individuel à gaz, non raccordé à un circuit hydraulique de chauffage central."
+  }
+};
 const QUALITES = ["Propriétaire","Locataire","Syndic","Gestionnaire","Autre"];
 const YESNO = ["Oui","Non"];
 const CONFORM3 = ["Conforme","Non conforme","Pas applicable"];
@@ -237,18 +258,31 @@ function isPellet(){return !!cat().is_pellet;}
 function isAtmo(){return D.combustible.includes("Atmosphérique");}
 function isUnit(){return D.combustible.includes("Unit");}
 function isReception(){return D.nature_controle===RECEPTION_GAZ;}
+function isEntretienIndividuel(){return D.nature_controle===ENTRETIEN_INDIVIDUEL;}
 function gasCombustibleKeys(){return Object.keys(CATALOG).filter(k=>k.startsWith('Gaz'));}
+function catIndividuel(){return CATALOG_INDIVIDUEL[D.combustible_individuel]||CATALOG_INDIVIDUEL["Chauffe-eau à gaz (individuel)"];}
 
 const STEPS_PERIODIQUE = ["Identification","Générateur","Installation","Régulation","Combustion","Bilan"];
 const STEPS_RECEPTION  = ["Administratif","Chaudière","Installation","Combustion","Conformité","Échéances"];
-function STEPS(){return isReception()?STEPS_RECEPTION:STEPS_PERIODIQUE;}
+const STEPS_INDIVIDUEL = ["Identification","Appareil","Sécurité","Mesures","Conclusion"];
+function modeOf(natureValue){
+  if(natureValue===RECEPTION_GAZ)return'reception';
+  if(natureValue===ENTRETIEN_INDIVIDUEL)return'individuel';
+  return'periodique';
+}
+function STEPS(){
+  const m=modeOf(D.nature_controle);
+  if(m==='reception')return STEPS_RECEPTION;
+  if(m==='individuel')return STEPS_INDIVIDUEL;
+  return STEPS_PERIODIQUE;
+}
 
 function onNatureChange(){
   const sel=document.querySelector('[data-f="nature_controle"]');
   if(!sel)return;
-  const wasReception=isReception();
-  const willBeReception=sel.value===RECEPTION_GAZ;
-  if(wasReception!==willBeReception&&!confirm('Changer de type de rapport peut réinitialiser certains champs déjà saisis. Continuer ?')){
+  const wasMode=modeOf(D.nature_controle);
+  const willBeMode=modeOf(sel.value);
+  if(wasMode!==willBeMode&&!confirm('Changer de type de rapport peut réinitialiser certains champs déjà saisis. Continuer ?')){
     sel.value=D.nature_controle;
     return;
   }
@@ -257,6 +291,10 @@ function onNatureChange(){
     D.combustible=gasCombustibleKeys()[0];
     const ct=CATALOG[D.combustible];
     D.raccordement=ct.raccordements[0]||'';D.type_bruleur=ct.bruleurs[0]||'';D.fluide=ct.fluides[0]||'Eau';D.condensation=ct.condensation||'Non';
+  }
+  if(isEntretienIndividuel()&&!D.combustible_individuel){
+    D.combustible_individuel=Object.keys(CATALOG_INDIVIDUEL)[0];
+    D.raccordement_individuel=catIndividuel().raccordements[0]||'';
   }
   render();
 }
@@ -326,6 +364,14 @@ function cmpCell(v,id){
 // ── STEPS ──
 function renderStep(){
   const s=STEPS()[STEP];
+  if(isEntretienIndividuel()){
+    if(s==="Identification")return sIdent();
+    if(s==="Appareil")return sAppareilIndividuel();
+    if(s==="Sécurité")return sSecuriteIndividuel();
+    if(s==="Mesures")return sMesuresIndividuel();
+    if(s==="Conclusion")return sConclusionIndividuel();
+    return '';
+  }
   if(isReception()){
     if(s==="Administratif")return sIdent();
     if(s==="Chaudière")return sGen();
@@ -484,6 +530,119 @@ function rEcheancesReception(){
 </div>
 <div style="padding:16px;text-align:center">
   <button class="btn btn-success" onclick="genPDF()" style="width:100%;max-width:320px;padding:14px;font-size:15px;border-radius:12px">⬇ Générer l'attestation PDF</button>
+</div>`;
+}
+
+// ══ RAPPORT "ENTRETIEN APPAREIL INDIVIDUEL AU GAZ" ══
+// Hors champ d'application AGW 29/01/2009 (chauffage central uniquement) : aucune
+// périodicité légale identifiée pour ces appareils en Wallonie. Ce rapport est une
+// attestation d'entretien/sécurité volontaire (bonnes pratiques NBN D51-003), pas une
+// attestation réglementaire — voir le disclaimer affiché sur chaque étape et dans le PDF.
+const DISCLAIMER_INDIVIDUEL = "Cet appareil individuel n'est pas soumis à l'AGW du 29/01/2009 (qui ne vise que le chauffage central) : il n'existe pas de périodicité légale wallonne connue pour ce type d'appareil. Ce rapport atteste d'un entretien et d'un contrôle de sécurité volontaires, inspirés des bonnes pratiques (norme NBN D51-003), et sert de preuve de diligence auprès de votre assurance.";
+
+function onAppareilIndividuelChange(){
+  const sel=document.querySelector('[data-f="combustible_individuel"]');
+  if(sel){
+    D.combustible_individuel=sel.value;
+    const ct=catIndividuel();
+    D.raccordement_individuel=ct.raccordements[0]||'';
+  }
+  const scrollY=window.scrollY;
+  document.getElementById('main').innerHTML=renderStep();
+  window.scrollTo(0,scrollY);
+}
+
+function sAppareilIndividuel(){
+  const d=D;const ct=catIndividuel();
+  const marqOpts=["Autre",...ct.marques.filter(m=>m!=='Autre')];
+  return`
+<div class="alert alert-orange">${DISCLAIMER_INDIVIDUEL}</div>
+<div class="card">
+  <div class="card-title">Type d'appareil</div>
+  <div class="alert alert-info">${ct.note}</div>
+  <div class="grid-2">
+    ${fld('combustible_individuel','Type d\'appareil',d.combustible_individuel,false,null,Object.keys(CATALOG_INDIVIDUEL),'','onchange="onAppareilIndividuelChange()"')}
+    ${fld('raccordement_individuel','Raccordement / évacuation',d.raccordement_individuel,false,null,ct.raccordements)}
+  </div>
+</div>
+<div class="card">
+  <div class="card-title">Identification de l'appareil</div>
+  <div class="grid-2">
+    ${fld('gen_marque','Marque',d.gen_marque,false,null,marqOpts)}
+    ${fld('gen_type','Type / Modèle',d.gen_type)}
+    ${fld('gen_puissance','Puissance nominale (kW)',d.gen_puissance,false,'number')}
+    ${fld('gen_annee','Année de construction',d.gen_annee)}
+  </div>
+  <div class="grid-2" style="margin-top:10px">
+    ${fld('gen_serie','N° de série',d.gen_serie)}
+    ${fld('local_installation',"Local d'installation",d.local_installation,false,null,['Cuisine','Salle de bain','Buanderie','Séjour','Autre local'])}
+  </div>
+</div>`;
+}
+
+function sSecuriteIndividuel(){
+  const d=D;
+  return`
+<div class="alert alert-info">Checklist de sécurité inspirée de la norme NBN D51-003. Cochez chaque point selon vos constatations sur site.</div>
+<div class="card">
+  <div class="card-title">Raccordement & évacuation</div>
+  <div class="chk-group">
+    ${cr('v2i_raccordement','Raccordement / étanchéité conforme',d.v2i_raccordement,CONFORM2)}
+    ${cr('v2i_orifice','Orifice de mesure présent',d.v2i_orifice,CONFORM3)}
+    ${cr('v2i_evacuation','Évacuation des produits de combustion conforme',d.v2i_evacuation,OUINON_NA)}
+  </div>
+</div>
+<div class="card">
+  <div class="card-title">Ventilation & état général</div>
+  <div class="chk-group">
+    ${cr('v2i_ventilation','Ventilation du local conforme',d.v2i_ventilation,OUINON_NA)}
+    ${cr('v2i_etat','État visuel de l\'appareil',d.v2i_etat,['Bon état','Dépôts légers','Anomalie constatée'])}
+    ${cr('v2i_detecteur_co','Détecteur CO présent dans le local (recommandé)',d.v2i_detecteur_co,YESNO)}
+  </div>
+  ${d.v2i_etat==='Anomalie constatée'?fta('v2i_anomalie_details','Détail de l\'anomalie constatée',d.v2i_anomalie_details):''}
+</div>`;
+}
+
+function sMesuresIndividuel(){
+  const d=D;const ct=catIndividuel();const pm=ct.perfIndicative;
+  return`
+<div class="alert alert-info">Valeurs indicatives (bonnes pratiques constructeur), non issues d'un texte réglementaire spécifique à cet appareil.</div>
+<div class="card">
+  <div class="card-title">Mesures de combustion</div>
+  <div class="grid-2">
+    ${fld('vali_co_ppm',`CO mesuré (ppm) — indicatif : ≤ ${pm.co_ppm}`,d.vali_co_ppm,false,'number')}
+    ${fld('vali_rendement',`Rendement mesuré (%) — indicatif : ≥ ${pm.rendement}`,d.vali_rendement,false,'number')}
+  </div>
+  <div class="grid-2" style="margin-top:10px">
+    ${fld('temp_eau','Température ambiante lors de la mesure (°C)',d.temp_eau,false,'number')}
+  </div>
+</div>`;
+}
+
+function computeEntretienIndividuel(){
+  const base=parseFRDate(D.date);
+  if(!base)return'—';
+  const next=new Date(base);next.setFullYear(next.getFullYear()+1);
+  return`${fmtFRDate(next)} (bonne pratique : entretien annuel recommandé par le fabricant)`;
+}
+
+function sConclusionIndividuel(){
+  const d=D;
+  return`
+<div class="card">
+  <div class="card-title">Conclusion de l'entretien</div>
+  <div class="chk-group">
+    ${cr('v4i_etat_general',"État général de l'installation",d.v4i_etat_general,['Bon état — RAS','Anomalie mineure à surveiller','Anomalie nécessitant intervention','Danger immédiat — mise à l\'arrêt'])}
+  </div>
+  ${['Anomalie nécessitant intervention',"Danger immédiat — mise à l'arrêt"].includes(d.v4i_etat_general)?fta('v4i_raison','Détail et actions à entreprendre',d.v4i_raison):''}
+  ${fta('v4i_remarques','Autres remarques (optionnel)',d.v4i_remarques)}
+</div>
+<div class="card">
+  <div class="card-title">Prochain entretien recommandé</div>
+  ${fld('individuel_prochain_entretien','Date recommandée',computeEntretienIndividuel(),true)}
+</div>
+<div style="padding:16px;text-align:center">
+  <button class="btn btn-success" onclick="genPDF()" style="width:100%;max-width:320px;padding:14px;font-size:15px;border-radius:12px">⬇ Générer le rapport PDF</button>
 </div>`;
 }
 
@@ -733,16 +892,27 @@ function getAppPassword(){
 async function genPDF(){
   save();calcConf();
   if(isReception())calcConfReception();
-  const ct=cat();
-  const pmSimple={};Object.entries(ct.perf||{}).forEach(([k,v])=>{pmSimple[k]=v;});
-  const valsComb={};(ct.cols||[]).forEach(k=>{valsComb[k]=D[`val_${k}`]||'';});
-  const ech=isReception()?computeEcheancesReception():null;
-  const payload=Object.assign({},D,{
-    type_attestation:isReception()?'reception':'periodique',
-    perf_min:pmSimple,valeurs_combustion:valsComb,is_pellet:isPellet(),
-    reception_inspection:ech?ech.inspection:undefined,
-    reception_entretien:ech?ech.entretien:undefined
-  });
+
+  let payload;
+  if(isEntretienIndividuel()){
+    const ct=catIndividuel();
+    payload=Object.assign({},D,{
+      type_attestation:'individuel',
+      perf_indicative:ct.perfIndicative,
+      individuel_prochain_entretien:computeEntretienIndividuel()
+    });
+  }else{
+    const ct=cat();
+    const pmSimple={};Object.entries(ct.perf||{}).forEach(([k,v])=>{pmSimple[k]=v;});
+    const valsComb={};(ct.cols||[]).forEach(k=>{valsComb[k]=D[`val_${k}`]||'';});
+    const ech=isReception()?computeEcheancesReception():null;
+    payload=Object.assign({},D,{
+      type_attestation:isReception()?'reception':'periodique',
+      perf_min:pmSimple,valeurs_combustion:valsComb,is_pellet:isPellet(),
+      reception_inspection:ech?ech.inspection:undefined,
+      reception_entretien:ech?ech.entretien:undefined
+    });
+  }
 
   showOverlay('Génération du PDF en cours...');
   try{

@@ -841,4 +841,251 @@ function generateReceptionGaz(data) {
   });
 }
 
-module.exports = { generateAttestation, generateReceptionGaz };
+// ═══════════════════════════════════════════════════════════════
+// ENTRETIEN APPAREIL INDIVIDUEL AU GAZ (chauffe-eau / convecteur)
+// Hors champ d'application AGW 29/01/2009 (chauffage central uniquement) : ce rapport
+// n'est PAS une attestation réglementaire wallonne. Il documente un entretien et un
+// contrôle de sécurité volontaires, inspirés de la norme NBN D51-003, à valeur de preuve
+// de diligence pour l'assurance de l'occupant.
+// ═══════════════════════════════════════════════════════════════
+function generateEntretienIndividuel(data) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
+    doc.on('data', c => chunks.push(c));
+    doc.on('end',  () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const W  = doc.page.width;
+    const H  = doc.page.height;
+    const PW = W - ML - MR;
+    const SAFE_BOTTOM = H - FOOT - 16;
+
+    let y = 0;
+
+    function fillRect(x, yy, w, h, color) {
+      if (!color) return;
+      doc.save().fillColor(color).rect(x, yy, w, h).fill().restore();
+    }
+    function fillRRect(x, yy, w, h, fill, border, r) {
+      r = r || 3;
+      doc.save();
+      if (fill)   doc.fillColor(fill).roundedRect(x, yy, w, h, r).fill();
+      if (border) doc.strokeColor(border).lineWidth(0.6).roundedRect(x, yy, w, h, r).stroke();
+      doc.restore();
+    }
+    function hl(yy, x1, x2, color, lw) {
+      doc.save().strokeColor(color || C.line).lineWidth(lw || 0.4)
+        .moveTo(x1 != null ? x1 : ML, yy)
+        .lineTo(x2 != null ? x2 : W - MR, yy).stroke().restore();
+    }
+    function t(text, x, yy, o) {
+      o = o || {};
+      doc.save()
+        .fillColor(o.color || C.text)
+        .font(o.bold ? 'Helvetica-Bold' : (o.font || 'Helvetica'))
+        .fontSize(o.size || 9)
+        .text(String(text != null ? text : '—'), x, yy, {
+          width:     o.width,
+          align:     o.align || 'left',
+          lineBreak: o.wrap || false,
+        })
+        .restore();
+    }
+    function secHeader(yy, title) {
+      const h = 26;
+      fillRect(ML, yy, PW, h, C.blue);
+      fillRect(ML, yy, 5, h, C.blueMid);
+      t(title, ML + 14, yy + 8, { bold: true, size: 8.5, color: C.white });
+      return yy + h + 8;
+    }
+    function subHeader(yy, title, x, w) {
+      x = x != null ? x : ML; w = w || PW;
+      const h = 20;
+      fillRRect(x, yy, w, h, C.bluePale, C.blueBorder, 3);
+      t(title, x + 10, yy + 6, { bold: true, size: 8, color: C.blue, width: w - 20 });
+      return yy + h + 4;
+    }
+    function kvRow(yy, label, value, bg) {
+      const h = 20;
+      if (bg) fillRect(ML, yy, PW, h, bg);
+      t(label, ML + 8, yy + 6, { size: 8, color: C.textMid, width: 165 });
+      t(value || '—', ML + 176, yy + 6, { bold: true, size: 8.5, color: C.text, width: PW - 182 });
+      hl(yy + h, ML, W - MR, C.line, 0.3);
+      return yy + h;
+    }
+    function kvRow2(yy, left, right, bg) {
+      const h = 20;
+      const hw = PW / 2;
+      if (bg) fillRect(ML, yy, PW, h, bg);
+      t(left[0], ML + 8, yy + 6, { size: 8, color: C.textMid, width: left[2] || 60 });
+      t(left[1] || '—', ML + (left[2] || 60) + 10, yy + 6, { bold: true, size: 8.5, color: C.text, width: hw - (left[2] || 60) - 18 });
+      if (right) {
+        const rx = ML + hw + 4;
+        t(right[0], rx, yy + 6, { size: 8, color: C.textMid, width: right[2] || 60 });
+        t(right[1] || '—', rx + (right[2] || 60) + 6, yy + 6, { bold: true, size: 8.5, color: C.text, width: hw - (right[2] || 60) - 14 });
+      }
+      hl(yy + h, ML, W - MR, C.line, 0.3);
+      return yy + h;
+    }
+    function statusRow(yy, label, value, bg) {
+      const h = 20;
+      const vx = ML + PW * 0.63;
+      const bw = PW * 0.35;
+      if (bg) fillRect(ML, yy, PW, h, bg);
+      t(label, ML + 8, yy + 6, { size: 8.5, color: C.text, width: PW * 0.59 });
+      const v = (value || '').toUpperCase().trim();
+      let bb = C.gray, bf = C.textMid;
+      if (['OUI','OK','CONFORME','BON ÉTAT'].includes(v)) { bb = C.greenBg; bf = C.green; }
+      else if (['NON','NOK','NON CONFORME','ANOMALIE CONSTATÉE'].includes(v)) { bb = C.redBg; bf = C.red; }
+      else if (['PAS APPLICABLE','N/A'].includes(v)) { bb = C.gray; bf = C.textMid; }
+      else if (v) { bb = C.bluePale; bf = C.blue; }
+      fillRRect(vx, yy + 2, bw, h - 4, bb, null, 3);
+      t(value || '—', vx, yy + 5, { bold: true, size: 8, color: bf, width: bw, align: 'center' });
+      hl(yy + h, ML, W - MR, C.line, 0.3);
+      return yy + h;
+    }
+    function checkPage(yy, needed) {
+      if (yy + (needed || 60) > SAFE_BOTTOM) {
+        doc.addPage();
+        return ML;
+      }
+      return yy;
+    }
+    function drawFooters() {
+      const n = doc.bufferedPageRange().count;
+      for (let i = 0; i < n; i++) {
+        doc.switchToPage(i);
+        const fy = H - FOOT;
+        fillRect(0, fy, W, FOOT, C.blue);
+        fillRect(0, fy, 5, FOOT, C.blueMid);
+        t('Thermeo', ML + 4, fy + 9, { bold: true, size: 8.5, color: C.white });
+        t((data.tech_tel || '') + '  •  ' + (data.tech_email || ''), ML + 62, fy + 9, { size: 7.5, color: 'rgba(255,255,255,0.7)' });
+        t('N° ' + (data.n_rapport || '') + '  |  ' + (data.date || '') + '  |  Page ' + (i + 1) + '/' + n,
+          0, fy + 9, { size: 7, color: 'rgba(255,255,255,0.55)', width: W - MR - 4, align: 'right' });
+      }
+    }
+
+    // ── EN-TÊTE (sans mention AGW — hors champ d'application) ──
+    const HDR = 60;
+    fillRect(0, 0, W, HDR, '#FFFFFF');
+    fillRect(0, 0, 5, HDR, C.blue);
+    t("RAPPORT D'ENTRETIEN — APPAREIL INDIVIDUEL AU GAZ", ML + 8, 13, { bold: true, size: 13.5, color: C.blue });
+    t('Chauffe-eau / convecteur — contrôle de sécurité volontaire (NBN D51-003)', ML + 8, 34, { size: 8.5, color: 'rgba(255,255,255,0.6)' });
+    const bx = W - MR - 138, by = 9;
+    fillRRect(bx, by, 138, 42, C.blue, null, 4);
+    t('N° rapport', bx + 9, by + 6, { size: 7.5, color: 'rgba(255,255,255,0.75)' });
+    t(data.n_rapport || '—', bx + 9, by + 17, { bold: true, size: 12, color: C.white, width: 120 });
+    t('Date : ' + (data.date || ''), bx + 9, by + 31, { size: 7.5, color: 'rgba(255,255,255,0.7)' });
+    y = HDR + 16;
+
+    // Disclaimer réglementaire — jamais omis
+    fillRRect(ML, y, PW, 38, C.orangeBg, C.orangeBord, 4);
+    t("Cet appareil n'est pas soumis à l'AGW du 29/01/2009 (chauffage central uniquement). Aucune périodicité légale wallonne n'est connue pour ce type d'appareil. Ce rapport atteste d'un entretien et d'un contrôle de sécurité volontaires (bonnes pratiques NBN D51-003), à valeur de preuve de diligence pour votre assurance.",
+      ML + 10, y + 7, { size: 7.5, color: C.orange, width: PW - 20, wrap: true });
+    y += 46;
+
+    // ── IDENTIFICATION ──
+    y = secHeader(y, 'IDENTIFICATION');
+    const cw = PW / 2 - 5;
+    const rx2 = ML + cw + 10;
+    let yl = subHeader(y, 'TECHNICIEN AGRÉÉ', ML, cw);
+    let yr = subHeader(y, 'DEMANDEUR / CLIENT', rx2, cw);
+    const techR = [['Nom :', data.tech_nom, 24], ['Agrément :', data.tech_agrement, 32], ['Entreprise :', data.tech_entreprise, 36], ['Tél :', data.tech_tel, 18]];
+    const cliR  = [['Nom :', data.client_nom, 18], ['Adresse :', data.client_adresse, 28], ['Localité :', data.client_localite, 28], ['Tél :', data.client_tel, 18]];
+    const rowH = 18;
+    techR.forEach(function(r, i) {
+      if (i % 2 === 0) fillRect(ML, yl, cw, rowH, C.grayLight);
+      t(r[0], ML + 8, yl + 5, { size: 8, color: C.textMid, width: r[2] + 2 });
+      t(r[1] || '—', ML + r[2] + 12, yl + 5, { bold: true, size: 8.5, color: C.text, width: cw - r[2] - 18 });
+      hl(yl + rowH, ML, ML + cw, C.line, 0.3);
+      yl += rowH;
+    });
+    cliR.forEach(function(r, i) {
+      if (i % 2 === 0) fillRect(rx2, yr, cw, rowH, C.grayLight);
+      t(r[0], rx2 + 8, yr + 5, { size: 8, color: C.textMid, width: r[2] + 2 });
+      t(r[1] || '—', rx2 + r[2] + 12, yr + 5, { bold: true, size: 8.5, color: C.text, width: cw - r[2] - 18 });
+      hl(yr + rowH, rx2, rx2 + cw, C.line, 0.3);
+      yr += rowH;
+    });
+    y = Math.max(yl, yr) + 14;
+
+    // ── APPAREIL ──
+    y = checkPage(y, 120);
+    y = secHeader(y, "APPAREIL");
+    y = kvRow2(y, ['Type :', data.combustible_individuel, 40], ['Raccordement :', data.raccordement_individuel, 76], C.grayLight);
+    y = kvRow2(y, ['Marque :', data.gen_marque, 40], ['Type / Modèle :', data.gen_type, 62]);
+    y = kvRow2(y, ['Puissance (kW) :', data.gen_puissance, 84], ['Année :', data.gen_annee, 40], C.grayLight);
+    y = kvRow2(y, ['N° de série :', data.gen_serie, 52], ['Local :', data.local_installation, 40]);
+    y += 14;
+
+    // ── SÉCURITÉ ──
+    y = checkPage(y, 120);
+    y = secHeader(y, "VÉRIFICATIONS DE SÉCURITÉ (NBN D51-003)");
+    var chSec = [
+      ['Raccordement / étanchéité conforme', data.v2i_raccordement],
+      ['Orifice de mesure présent', data.v2i_orifice],
+      ['Évacuation des produits de combustion conforme', data.v2i_evacuation],
+      ['Ventilation du local conforme', data.v2i_ventilation],
+      ["État visuel de l'appareil", data.v2i_etat],
+      ['Détecteur CO présent dans le local (recommandé)', data.v2i_detecteur_co],
+    ];
+    chSec.forEach(function(r, i) { y = statusRow(y, r[0], r[1], i % 2 === 0 ? C.grayLight : null); });
+    if (data.v2i_anomalie_details) {
+      y += 6;
+      fillRRect(ML, y, PW, 20, C.orangeBg, C.orangeBord, 3);
+      t('Anomalie constatée :', ML + 10, y + 6, { bold: true, size: 9, color: C.orange });
+      y += 24;
+      var anH = Math.max(30, doc.heightOfString(data.v2i_anomalie_details, { width: PW - 22 }) + 16);
+      fillRRect(ML, y, PW, anH, '#FFFAF4', C.orangeBord, 3);
+      doc.save().fillColor(C.text).font('Helvetica').fontSize(9).text(data.v2i_anomalie_details, ML + 11, y + 9, { width: PW - 22, lineBreak: true }).restore();
+      y += anH + 10;
+    }
+    y += 8;
+
+    // ── MESURES DE COMBUSTION (indicatives) ──
+    y = checkPage(y, 90);
+    y = secHeader(y, 'MESURES DE COMBUSTION (VALEURS INDICATIVES)');
+    var pmi = data.perf_indicative || {};
+    y = kvRow2(y, ['CO mesuré (ppm) :', data.vali_co_ppm, 90], ['Indicatif (≤) :', pmi.co_ppm, 70], C.grayLight);
+    y = kvRow2(y, ['Rendement mesuré (%) :', data.vali_rendement, 110], ['Indicatif (≥) :', pmi.rendement, 70]);
+    y += 6;
+    t("Valeurs indicatives issues des bonnes pratiques constructeur, non issues d'un texte réglementaire spécifique à cet appareil.", ML + 8, y, { size: 7.5, color: C.textMid, width: PW - 16 });
+    y += 20;
+
+    // ── CONCLUSION ──
+    y = checkPage(y, 100);
+    y = secHeader(y, 'CONCLUSION DE L’ENTRETIEN');
+    var etatOk = data.v4i_etat_general === 'Bon état — RAS';
+    var etatDanger = (data.v4i_etat_general || '').includes('Danger');
+    fillRRect(ML, y, PW, 34, etatOk ? C.greenBg : (etatDanger ? C.redBg : C.orangeBg), etatOk ? C.greenBord : (etatDanger ? C.redBord : C.orangeBord), 4);
+    t(data.v4i_etat_general || '—', ML + 14, y + 10, { bold: true, size: 13, color: etatOk ? C.green : (etatDanger ? C.red : C.orange) });
+    y += 42;
+    if (data.v4i_raison) {
+      y = kvRow(y, 'Actions à entreprendre :', null, C.grayLight);
+      var rH = Math.max(30, doc.heightOfString(data.v4i_raison, { width: PW - 22 }) + 16);
+      fillRRect(ML, y, PW, rH, C.grayLight, C.line, 3);
+      doc.save().fillColor(C.text).font('Helvetica').fontSize(9).text(data.v4i_raison, ML + 11, y + 9, { width: PW - 22, lineBreak: true }).restore();
+      y += rH + 10;
+    }
+    if (data.v4i_remarques) {
+      var rmH = Math.max(30, doc.heightOfString(data.v4i_remarques, { width: PW - 22 }) + 16);
+      fillRRect(ML, y, PW, rmH, C.grayLight, C.line, 3);
+      doc.save().fillColor(C.text).font('Helvetica').fontSize(9).text(data.v4i_remarques, ML + 11, y + 9, { width: PW - 22, lineBreak: true }).restore();
+      y += rmH + 10;
+    }
+    y = kvRow(y, 'Prochain entretien recommandé :', data.individuel_prochain_entretien, C.grayLight);
+    y += 16;
+
+    // Signature
+    y = checkPage(y, 60);
+    fillRRect(ML, y, PW / 2 - 4, 24, C.bluePale, C.blueBorder, 3);
+    t('Entretien réalisé par :', ML + 10, y + 8, { bold: true, size: 9, color: C.blue });
+    t((data.tech_nom || '') + ' — ' + (data.tech_agrement || ''), ML + 10, y + 34, { bold: true, size: 9.5, color: C.text });
+
+    drawFooters();
+    doc.end();
+  });
+}
+
+module.exports = { generateAttestation, generateReceptionGaz, generateEntretienIndividuel };

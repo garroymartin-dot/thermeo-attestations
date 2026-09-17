@@ -1,4 +1,4 @@
-const { generateAttestation, generateReceptionGaz } = require('./pdf-generator');
+const { generateAttestation, generateReceptionGaz, generateEntretienIndividuel } = require('./pdf-generator');
 
 const HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -31,7 +31,7 @@ async function archiveByEmail(pdfBuffer, data, nomFichier) {
         subject: `Attestation générée — ${data.n_rapport || '—'} — ${data.client_nom || 'client'}`,
         text: [
           'Nouvelle attestation générée automatiquement.',
-          `Type : ${data.type_attestation === 'reception' ? 'Réception chauffage gaz' : 'Contrôle périodique'}`,
+          `Type : ${data.type_attestation === 'reception' ? 'Réception chauffage gaz' : data.type_attestation === 'individuel' ? 'Entretien appareil individuel' : 'Contrôle périodique'}`,
           `N° attestation : ${data.n_rapport || '—'}`,
           `Date : ${data.date || '—'}`,
           `Client : ${data.client_nom || '—'}`,
@@ -72,9 +72,10 @@ exports.handler = async (event) => {
     Object.assign(data, TECH_FIXED);
 
     // Génération PDF — routage selon le type d'attestation
-    const pdfBuffer = data.type_attestation === 'reception'
-      ? await generateReceptionGaz(data)
-      : await generateAttestation(data);
+    let pdfBuffer;
+    if (data.type_attestation === 'reception') pdfBuffer = await generateReceptionGaz(data);
+    else if (data.type_attestation === 'individuel') pdfBuffer = await generateEntretienIndividuel(data);
+    else pdfBuffer = await generateAttestation(data);
     const nomClient = (data.client_nom || 'client').replace(/[^a-zA-Z0-9]/g, '_');
     const nomFichier = `Attestation_${data.n_rapport || 'thermeo'}_${nomClient}.pdf`;
 
