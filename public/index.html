@@ -208,6 +208,7 @@ const OUINON_NA = ["Oui","Non","Pas applicable"];
 const PRESENT3 = ["Présent","Pas présent","Pas applicable"];
 const PROD3 = ["Chauffage","ECS","Chauffage + ECS"];
 const PERMIS2 = ["Avant le 29/05/2009","Après le 29/05/2009"];
+const BRULEUR_TYPE = ["Prémix (prémélange total)","Non-prémix"];
 
 // ══ STATE ══
 let STEP = 0;
@@ -226,6 +227,7 @@ let D = {
   v2r_orifice:"Conforme",v2r_ventilation:"Oui",v2r_air_comburant:"Oui",v2r_evacuation:"Oui",
   v2r_instructions:"Présent",v2r_dimensionnement:"Pas applicable",
   v2r_pression_prescrite_connue:"Non",v2r_condensation_absence:"Oui",
+  bruleur_premix:"Prémix (prémélange total)",
 };
 
 function genN(){const d=new Date();const rand=Math.random().toString(36).slice(2,6).toUpperCase();return`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${rand}`;}
@@ -299,6 +301,9 @@ function onCombustibleChange(){
     D.type_bruleur=ct.bruleurs[0]||'';
     D.fluide=ct.fluides[0]||'Eau';
     D.condensation=ct.condensation||'Non';
+    // Pré-remplir le type de brûleur (premix/non-premix) quand le catalogue le précise
+    if(D.combustible.includes('Non-prémix'))D.bruleur_premix='Non-prémix';
+    else if(D.combustible.includes('Prémix'))D.bruleur_premix='Prémix (prémélange total)';
     // Reset pellet-specific fields
     if(!ct.is_pellet){D.pellet_norme='';D.pellet_alimentation='';D.v2_qualite_pellet='';}
   }
@@ -513,7 +518,7 @@ function sIdent(){const d=D;return`
 </div>`;}
 
 function sGen(){
-  const d=D;const ct=cat();
+  const d=D;const ct=cat();const unit=isUnit();
   const marqOpts=["Autre",...ct.marques];
   const combustibleOpts=isReception()?gasCombustibleKeys():Object.keys(CATALOG);
   return`
@@ -527,6 +532,7 @@ function sGen(){
     ${fld('condensation','Condensation',d.condensation,false,null,YESNO)}
     ${fld('nb_allures','Nombre d\'allures',d.nb_allures,false,'number')}
     ${fld('plaque_signaletique','Plaque signalétique',d.plaque_signaletique,false,null,YESNO)}
+    ${unit?fld('bruleur_premix','Brûleur',d.bruleur_premix,false,null,BRULEUR_TYPE):''}
   </div>
   ${isPellet()?`<div class="grid-2" style="margin-top:10px">
     ${fld('pellet_norme','Norme',d.pellet_norme,false,null,['EN 14785 (poêle)','EN 303-5 classe 3','EN 303-5 classe 4','EN 303-5 classe 5'])}

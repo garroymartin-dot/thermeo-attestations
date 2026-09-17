@@ -237,6 +237,9 @@ function generateAttestation(data) {
     y = subHeader(y, 'G\u00c9N\u00c9RATEUR DE CHALEUR');
     y = kvRow2(y, ['Combustible :', data.combustible, 58], ['Raccordement :', data.raccordement, 62], C.grayLight);
     y = kvRow2(y, ['Condensation :', data.condensation, 62], ['Type br\u00fbleur :', data.type_bruleur, 58]);
+    if ((data.combustible || '').includes('Unit') && data.bruleur_premix) {
+      y = kvRow(y, 'Br\u00fbleur :', data.bruleur_premix, C.grayLight);
+    }
     y = kvRow2(y, ['Marque :', data.gen_marque, 40], ['Type / Mod\u00e8le :', data.gen_type, 62], C.grayLight);
     y = kvRow2(y, ['Puissance nominale (kW) :', data.gen_puissance, 104], ['Ann\u00e9e de construction :', data.gen_annee, 98]);
     y = kvRow2(y, ['N\u00b0 de s\u00e9rie :', data.gen_serie, 52], ['Nb g\u00e9n\u00e9rateurs :', data.nb_gen, 68], C.grayLight);
@@ -653,6 +656,9 @@ function generateReceptionGaz(data) {
     y = secHeader(y, 'VOLET 2  —  DONNÉES CHAUDIÈRE');
     y = kvRow2(y, ['Combustible :', data.combustible, 58], ['Raccordement :', data.raccordement, 62], C.grayLight);
     y = kvRow2(y, ['Condensation :', data.condensation, 62], ['Type brûleur :', data.type_bruleur, 58]);
+    if ((data.combustible || '').includes('Unit') && data.bruleur_premix) {
+      y = kvRow(y, 'Brûleur :', data.bruleur_premix, C.grayLight);
+    }
     y = kvRow2(y, ['Marque :', data.gen_marque, 40], ['Type / Modèle :', data.gen_type, 62], C.grayLight);
     y = kvRow2(y, ['Puissance nominale (kW) :', data.gen_puissance, 104], ['Année de construction :', data.gen_annee, 98]);
     y = kvRow2(y, ['N° de série :', data.gen_serie, 52], ['Fluide caloporteur :', data.fluide, 76], C.grayLight);
